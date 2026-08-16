@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="הכיס המשפחתי">
+<meta name="theme-color" content="#2a78d6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>הכיס המשפחתי</title>
 <style>
 :root{
@@ -168,6 +176,14 @@ input:focus,select:focus{outline:2px solid var(--s1);outline-offset:-1px}
 .fab:active{transform:scale(.93)}
 @media(max-width:719px){.fab{bottom:calc(78px + env(safe-area-inset-bottom));inset-inline-end:16px;width:56px;height:56px}}
 
+.offbar{position:fixed;inset-inline:0;top:0;z-index:90;background:var(--warning);color:#0b0b0b;text-align:center;
+  font-size:12.5px;font-weight:600;line-height:1.35;height:calc(26px + env(safe-area-inset-top));
+  padding:calc(5px + env(safe-area-inset-top)) 12px 0;display:none}
+body.offline .offbar{display:block}
+/* הפס דוחף את התוכן במקום לכסות אותו */
+body{padding-top:env(safe-area-inset-top)}
+body.offline,body.offline .wiz{padding-top:calc(26px + env(safe-area-inset-top))}
+.wiz{padding-top:env(safe-area-inset-top)}
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
 .scrim.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;z-index:61;background:var(--surface-1);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;
@@ -259,6 +275,8 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
   </div>
 </header>
 
+<div class="offbar" id="offbar">אין חיבור לאינטרנט — ממשיכים לעבוד, והכול יסונכרן כשהחיבור יחזור</div>
+
 <div class="wrap">
   <nav class="tabs" id="tabs"></nav>
   <section id="view"></section>
@@ -298,6 +316,16 @@ const LINK=(function(){
 })();
 const SERVED_URL=(String(window.SYNC_URL).indexOf('http')===0)?window.SYNC_URL
   :(LINK.url.indexOf('http')===0?LINK.url:'');
+
+/* ==================== התקנה כאפליקציה ==================== */
+const STANDALONE=(matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)
+  ||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+let deferredInstall=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;
+  if(typeof tab!=='undefined'&&tab==='settings')render()});
+addEventListener('appinstalled',()=>{deferredInstall=null;
+  if(typeof toast==='function')toast('האפליקציה הותקנה ✓')});
 
 /* ==================== אחסון ומודל ==================== */
 const KEY='family-budget-v3';
@@ -976,9 +1004,30 @@ function wireFixed(){
 }
 
 /* ==================== הגדרות ==================== */
+function installCard(){
+  if(STANDALONE)return `
+  <div class="card">
+    <h2>📲 מותקנת כאפליקציה</h2>
+    <p class="sub">אתם עובדים מהאייקון שבמסך הבית. היא נפתחת גם בלי חיבור לאינטרנט, ומסתנכרנת ברגע שהחיבור חוזר.</p>
+  </div>`;
+  if(deferredInstall)return `
+  <div class="card">
+    <h2>📲 התקנה על המכשיר</h2>
+    <p class="sub">אייקון משלה במסך הבית, פתיחה במסך מלא בלי שורת כתובת, ועבודה גם בלי אינטרנט.</p>
+    <button class="btn" id="installBtn">התקנת האפליקציה</button>
+  </div>`;
+  if(IS_IOS)return `
+  <div class="card">
+    <h2>📲 התקנה על המכשיר</h2>
+    <p class="sub">ב-Safari: כפתור השיתוף <b>⬆️</b> בתחתית המסך ← <b>הוספה למסך הבית</b>.
+    מכאן האפליקציה נפתחת עם אייקון משלה, במסך מלא, ועובדת גם בלי אינטרנט.</p>
+  </div>`;
+  return '';
+}
 function viewSettings(){
   const sy=S.sync;
   return `
+  ${installCard()}
   <div class="card">
     <h2>👥 בני המשפחה</h2>
     <p class="sub">כל תנועה משויכת לאדם — כך רואים מי הוציא מה</p>
@@ -1047,6 +1096,29 @@ function wireSettings(){
   document.querySelectorAll('.delMem').forEach(b=>b.onclick=()=>{
     if(S.members.length<=1){toast('חייב להישאר לפחות אדם אחד');return}
     removeRec('members',b.dataset.id);save();render()});
+
+  const ib=document.getElementById('installBtn');
+  if(ib)ib.onclick=async()=>{
+    if(!deferredInstall)return;
+    ib.disabled=true;deferredInstall.prompt();
+    try{await deferredInstall.userChoice}catch(e){}
+    deferredInstall=null;render()};
+
+  /* הדבקה של קישור הזמנה שלם לתוך שדה הכתובת — מחלצים ממנו כתובת וקוד */
+  const su=document.getElementById('syUrl');
+  if(su)su.oninput=()=>{
+    const v=su.value.trim(), h=v.indexOf('#');
+    if(h<0||!/[#&]u=/.test(v))return;
+    const p={};v.slice(h+1).split('&').forEach(s=>{const k=s.indexOf('=');if(k>0)p[s.slice(0,k)]=s.slice(k+1)});
+    const dec=s=>{try{return decodeURIComponent(escape(atob(
+      decodeURIComponent(s).replace(/-/g,'+').replace(/_/g,'/'))))}catch(e){return ''}};
+    const u=p.u?dec(p.u):'';
+    if(u.indexOf('http')!==0)return;
+    su.value=u;
+    const c=p.c?dec(p.c):'', ce=document.getElementById('syCode');
+    if(c&&ce&&!ce.value.trim())ce.value=c;
+    toast('פרטי החיבור חולצו מהקישור ✓');
+  };
 
   let syMode='create';
   document.querySelectorAll('#syMode button').forEach(b=>b.onclick=()=>{
@@ -1181,6 +1253,15 @@ function applyWizard(){
 }
 
 /* ==================== אתחול ==================== */
+/* מצב רשת + Service Worker (רק כשמוגשים מהאינטרנט; בקובץ מקומי אין טעם) */
+const setNet=()=>document.body.classList.toggle('offline',navigator.onLine===false);
+addEventListener('online',()=>{setNet();if(S.sync.on)syncNow(true)});
+addEventListener('offline',setNet);
+setNet();
+if('serviceWorker' in navigator&&(location.protocol==='https:'
+   ||location.hostname==='localhost'||location.hostname==='127.0.0.1'))
+  addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
 document.getElementById('mPrev').onclick=()=>{month=shiftMonth(month,-1);render()};
 document.getElementById('mNext').onclick=()=>{month=shiftMonth(month,1);render()};
 document.getElementById('syncBtn').onclick=()=>syncNow(false);
