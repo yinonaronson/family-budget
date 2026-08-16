@@ -462,7 +462,7 @@ async function syncNow(silent,adopt){
     const data=await res.json();
     if(data.error)throw new Error(data.error);
     if(adopt){
-      if(data.state&&data.state.categories){
+      if(data.state&&data.state.categories&&data.state.categories.length){
         const keep=S.sync;S=data.state;S.sync=keep;S.sync.last=now();
         (function(){const d=defaultState();Object.keys(d).forEach(k=>{if(S[k]===undefined)S[k]=d[k]})})();
         store.write(S);syncState='idle';setSyncUI();render();
