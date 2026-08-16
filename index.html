@@ -301,19 +301,183 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 <footer class="note" id="footNote"></footer>
 
 <script>
+/* מקודד QR מינימלי — מצב בייטים, רמת תיקון שגיאות M. מספיק לקישור ההזמנה. */
+var QR=(function(){
+  var EXP=new Array(512),LOG=new Array(256);
+  (function(){for(var i=0,x=1;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&256)x^=285}
+    for(var j=255;j<512;j++)EXP[j]=EXP[j-255]})();
+  function mul(a,b){return(a===0||b===0)?0:EXP[(LOG[a]+LOG[b])%255]}
+  function rsPoly(n){var p=[1];for(var i=0;i<n;i++){var q=[];for(var j=0;j<=p.length;j++){
+    var v=0;if(j<p.length)v^=p[j];if(j>0)v^=mul(p[j-1],EXP[i]);q[j]=v}p=q}return p}
+  function rsEnc(data,n){var res=new Array(n).fill(0),g=rsPoly(n);
+    for(var i=0;i<data.length;i++){var f=data[i]^res[0];res.shift();res.push(0);
+      if(f!==0)for(var j=0;j<n;j++)res[j]^=mul(g[j+1],f)}
+    return res}
+
+  /* לכל גרסה 1..20 ברמת M: [סה"כ קודוני נתונים, קודוני EC לבלוק, בלוקים בקבוצה1, נתונים בבלוק1, בלוקים בקבוצה2, נתונים בבלוק2] */
+  var M=[null,
+   [16,10,1,16,0,0],[28,16,1,28,0,0],[44,26,1,44,0,0],[64,18,2,32,0,0],[86,24,2,43,0,0],
+   [108,16,4,27,0,0],[124,18,4,31,0,0],[154,22,2,38,2,39],[182,22,3,36,2,37],[216,26,4,43,1,44],
+   [254,30,1,50,4,51],[290,22,6,36,2,37],[334,22,8,37,1,38],[365,24,4,40,5,41],[415,24,5,41,5,42],
+   [453,28,7,45,3,46],[507,28,10,46,1,47],[563,26,9,43,4,44],[627,26,3,44,11,45],[669,26,3,41,13,42]];
+
+  var ALIGN=[null,[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],
+   [6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],
+   [6,30,58,86],[6,34,62,90]];
+
+  function bch15(v){var d=v<<10;for(var i=4;i>=0;i--)if(d>>>(10+i)&1)d^=0x537<<i;return((v<<10)|d)^0x5412}
+  function bch18(v){var d=v<<12;for(var i=5;i>=0;i--)if(d>>>(12+i)&1)d^=0x1f25<<i;return(v<<12)|d}
+
+  function encode(text){
+    var bytes=[],i;
+    for(i=0;i<text.length;i++){var c=text.charCodeAt(i);
+      if(c<128)bytes.push(c);
+      else if(c<2048){bytes.push(192|c>>6,128|c&63)}
+      else{bytes.push(224|c>>12,128|c>>6&63,128|c&63)}}
+
+    var ver=0;
+    for(i=1;i<M.length;i++){var cc=(i<10)?8:16;
+      if(M[i][0]*8>=4+cc+bytes.length*8){ver=i;break}}
+    if(!ver)throw new Error('too long');
+
+    var spec=M[ver],total=spec[0],ecLen=spec[1];
+    var bits=[];
+    function put(v,n){for(var k=n-1;k>=0;k--)bits.push(v>>>k&1)}
+    put(4,4);put(bytes.length,(ver<10)?8:16);
+    for(i=0;i<bytes.length;i++)put(bytes[i],8);
+    for(i=0;i<4&&bits.length<total*8;i++)bits.push(0);
+    while(bits.length%8)bits.push(0);
+    var dc=[];for(i=0;i<bits.length;i+=8){var b=0;for(var k=0;k<8;k++)b=(b<<1)|bits[i+k];dc.push(b)}
+    var pad=[236,17],p=0;while(dc.length<total)dc.push(pad[p++%2]);
+
+    /* פיצול לבלוקים */
+    var blocks=[],ecs=[],off=0,g;
+    for(g=0;g<spec[2];g++){var d=dc.slice(off,off+spec[3]);off+=spec[3];blocks.push(d);ecs.push(rsEnc(d,ecLen))}
+    for(g=0;g<spec[4];g++){var d2=dc.slice(off,off+spec[5]);off+=spec[5];blocks.push(d2);ecs.push(rsEnc(d2,ecLen))}
+
+    var out=[],maxD=Math.max(spec[3],spec[5]||0);
+    for(i=0;i<maxD;i++)for(g=0;g<blocks.length;g++)if(i<blocks[g].length)out.push(blocks[g][i]);
+    for(i=0;i<ecLen;i++)for(g=0;g<ecs.length;g++)out.push(ecs[g][i]);
+
+    /* מטריצה */
+    var size=ver*4+17;
+    var m=[],res=[];
+    for(i=0;i<size;i++){m.push(new Array(size).fill(null));res.push(new Array(size).fill(false))}
+    function setF(r,c,v){if(r<0||c<0||r>=size||c>=size)return;m[r][c]=v;res[r][c]=true}
+
+    function finder(r,c){for(var dr=-1;dr<8;dr++)for(var dc2=-1;dc2<8;dc2++){
+      var rr=r+dr,cc2=c+dc2;if(rr<0||cc2<0||rr>=size||cc2>=size)continue;
+      var inb=(dr>=0&&dr<7&&dc2>=0&&dc2<7);
+      var on=inb&&((dr===0||dr===6||dc2===0||dc2===6)||(dr>=2&&dr<=4&&dc2>=2&&dc2<=4));
+      setF(rr,cc2,on)}}
+    finder(0,0);finder(0,size-7);finder(size-7,0);
+
+    for(i=8;i<size-8;i++){setF(6,i,i%2===0);setF(i,6,i%2===0)}
+
+    var ap=ALIGN[ver];
+    for(var a=0;a<ap.length;a++)for(var b2=0;b2<ap.length;b2++){
+      var ar=ap[a],ac=ap[b2];
+      if((ar<8&&ac<8)||(ar<8&&ac>size-9)||(ar>size-9&&ac<8))continue;
+      for(var dr2=-2;dr2<=2;dr2++)for(var dc3=-2;dc3<=2;dc3++)
+        setF(ar+dr2,ac+dc3,Math.max(Math.abs(dr2),Math.abs(dc3))!==1)}
+
+    setF(size-8,8,true);
+    for(i=0;i<9;i++){setF(8,i,m[8][i]===null?false:m[8][i]);setF(i,8,m[i][8]===null?false:m[i][8])}
+    for(i=0;i<8;i++){setF(8,size-1-i,false);setF(size-1-i,8,false)}
+
+    if(ver>=7){var vb=bch18(ver);
+      for(i=0;i<18;i++){var bit=(vb>>>i&1)===1;
+        setF(Math.floor(i/3),size-11+i%3,bit);setF(size-11+i%3,Math.floor(i/3),bit)}}
+
+    /* פריסת נתונים */
+    var dirUp=true,idx=0,bitIdx=0,col=size-1;
+    while(col>0){
+      if(col===6)col--;
+      for(var t=0;t<size;t++){
+        var row=dirUp?size-1-t:t;
+        for(var s=0;s<2;s++){var cc4=col-s;
+          if(res[row][cc4])continue;
+          var v=false;
+          if(idx<out.length)v=((out[idx]>>>(7-bitIdx))&1)===1;
+          m[row][cc4]=v;
+          bitIdx++;if(bitIdx===8){bitIdx=0;idx++}}}
+      dirUp=!dirUp;col-=2}
+
+    function maskFn(k,r,c){switch(k){
+      case 0:return (r+c)%2===0; case 1:return r%2===0; case 2:return c%3===0;
+      case 3:return (r+c)%3===0; case 4:return (Math.floor(r/2)+Math.floor(c/3))%2===0;
+      case 5:return (r*c)%2+(r*c)%3===0; case 6:return ((r*c)%2+(r*c)%3)%2===0;
+      default:return ((r+c)%2+(r*c)%3)%2===0}}
+
+    function penalty(g2){
+      var n=0,r,c,i2,run,prev;
+      for(r=0;r<size;r++){run=1;prev=g2[r][0];
+        for(c=1;c<size;c++){if(g2[r][c]===prev)run++;else{if(run>=5)n+=3+(run-5);run=1;prev=g2[r][c]}}
+        if(run>=5)n+=3+(run-5)}
+      for(c=0;c<size;c++){run=1;prev=g2[0][c];
+        for(r=1;r<size;r++){if(g2[r][c]===prev)run++;else{if(run>=5)n+=3+(run-5);run=1;prev=g2[r][c]}}
+        if(run>=5)n+=3+(run-5)}
+      for(r=0;r<size-1;r++)for(c=0;c<size-1;c++)
+        if(g2[r][c]===g2[r][c+1]&&g2[r][c]===g2[r+1][c]&&g2[r][c]===g2[r+1][c+1])n+=3;
+      var pat=[true,false,true,true,true,false,true,false,false,false,false];
+      function has(arr,st){for(var q=0;q<11;q++)if(arr[st+q]!==pat[q])return false;return true}
+      function hasR(arr,st){for(var q=0;q<11;q++)if(arr[st+q]!==pat[10-q])return false;return true}
+      for(r=0;r<size;r++)for(c=0;c+11<=size;c++){if(has(g2[r],c))n+=40;if(hasR(g2[r],c))n+=40}
+      for(c=0;c<size;c++){var colArr=[];for(r=0;r<size;r++)colArr.push(g2[r][c]);
+        for(r=0;r+11<=size;r++){if(has(colArr,r))n+=40;if(hasR(colArr,r))n+=40}}
+      var dark=0;for(r=0;r<size;r++)for(c=0;c<size;c++)if(g2[r][c])dark++;
+      n+=Math.floor(Math.abs(dark*100/(size*size)-50)/5)*10;
+      return n}
+
+    var best=null,bestP=Infinity,bestMask=0;
+    for(var k2=0;k2<8;k2++){
+      var g3=[];for(r2=0;r2<size;r2++)g3.push(m[r2].slice());
+      var r2,c2;
+      for(r2=0;r2<size;r2++)for(c2=0;c2<size;c2++)
+        if(!res[r2][c2]&&maskFn(k2,r2,c2))g3[r2][c2]=!g3[r2][c2];
+      var fb=bch15((0<<3)|k2);   /* 0 = רמת M */
+      for(i=0;i<15;i++){var bt=((fb>>>i)&1)===1;
+        if(i<6)g3[i][8]=bt; else if(i<8)g3[i+1][8]=bt; else g3[size-15+i][8]=bt;
+        if(i<8)g3[8][size-1-i]=bt; else if(i<9)g3[8][15-i]=bt; else g3[8][14-i]=bt}
+      g3[size-8][8]=true;
+      var pn=penalty(g3);
+      if(pn<bestP){bestP=pn;best=g3;bestMask=k2}}
+    return best;
+  }
+
+  function svg(text,px,quiet){
+    var g=encode(text),n=g.length,q=(quiet===undefined?4:quiet),tot=n+q*2,d='';
+    for(var r=0;r<n;r++)for(var c=0;c<n;c++)
+      if(g[r][c])d+='M'+(c+q)+' '+(r+q)+'h1v1h-1z';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+tot+' '+tot+'" width="'+(px||220)+'" height="'+(px||220)+'" shape-rendering="crispEdges" role="img" aria-label="QR">'
+      +'<rect width="'+tot+'" height="'+tot+'" fill="#ffffff"/><path d="'+d+'" fill="#000000"/></svg>';
+  }
+  return {encode:encode,svg:svg};
+})();
+</script>
+
+<script>
 /* כשהקובץ מוגש מתוך Apps Script, השרת מחליף את המחרוזת הבאה בכתובת האמיתית.
    בקובץ עצמאי היא נשארת כמות שהיא ופשוט מתעלמים ממנה. */
 window.SYNC_URL='__SYNC_URL__';
 /* אפשר גם להעביר את פרטי החיבור בקישור עצמו, אחרי הסולמית:
    ...index.html#u=<base64 של כתובת ה-exec>&c=<base64 של קוד המשפחה>
    החלק שאחרי הסולמית לעולם אינו נשלח לשרת האחסון ואינו נשמר בקוד המקור. */
-const LINK=(function(){
-  const o={},h=(location.hash||'').replace(/^#/,'');
-  h.split('&').forEach(function(p){const i=p.indexOf('=');if(i>0)o[p.slice(0,i)]=p.slice(i+1)});
-  const dec=function(s){try{return decodeURIComponent(escape(atob(
-    decodeURIComponent(s).replace(/-/g,'+').replace(/_/g,'/'))))}catch(e){return ''}};
-  return {url:o.u?dec(o.u):'',code:o.c?dec(o.c):''};
-})();
+const EXEC_PRE='https://script.google.com/macros/s/', EXEC_SUF='/exec';
+const b64u=function(s){try{return btoa(unescape(encodeURIComponent(s)))
+  .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}catch(e){return ''}};
+const unb64u=function(s){try{return decodeURIComponent(escape(atob(
+  decodeURIComponent(s).replace(/-/g,'+').replace(/_/g,'/'))))}catch(e){return ''}};
+function parseInvite(str){
+  const o={},i=String(str||'').indexOf('#');
+  if(i<0)return{url:'',code:''};
+  String(str).slice(i+1).split('&').forEach(function(p){
+    const k=p.indexOf('=');if(k>0)o[p.slice(0,k)]=p.slice(k+1)});
+  /* s = מזהה הפריסה בלבד (קצר); u = הכתובת המלאה ב-base64 (התאמה לאחור) */
+  const url=o.s?(EXEC_PRE+decodeURIComponent(o.s)+EXEC_SUF):(o.u?unb64u(o.u):'');
+  return {url:url,code:o.c?unb64u(o.c):''};
+}
+const LINK=parseInvite(location.hash?('#'+location.hash.replace(/^#/,'')):'');
 const SERVED_URL=(String(window.SYNC_URL).indexOf('http')===0)?window.SYNC_URL
   :(LINK.url.indexOf('http')===0?LINK.url:'');
 
@@ -1024,6 +1188,32 @@ function installCard(){
   </div>`;
   return '';
 }
+/* קישור ההזמנה נבנה מהמכשיר הזה — קצר ככל האפשר כדי שלא ייחתך בשיתוף */
+function inviteLink(){
+  const u=S.sync.url||'', c=S.sync.code||'';
+  if(!u||!c)return '';
+  const base=location.origin+location.pathname;
+  const m=u.match(/^https:\/\/script\.google\.com\/macros\/s\/([^/]+)\/exec$/);
+  return base+'#'+(m?('s='+m[1]):('u='+b64u(u)))+'&c='+b64u(c);
+}
+function inviteCard(){
+  const L=inviteLink();
+  if(!L)return '';
+  return `
+  <div class="card">
+    <h2>📱 חיבור מכשיר נוסף</h2>
+    <p class="sub">הדרך הבטוחה ביותר: לסרוק את הקוד במצלמה של הטלפון. אפשר גם להעתיק את הקישור —
+      אבל אל תקלידו אותו ידנית, הוא ארוך ורגיש לטעות אחת.</p>
+    <div id="qrBox" style="display:flex;justify-content:center;padding:6px 0 12px"></div>
+    <input id="invLink" readonly value="${esc(L)}"
+      style="width:100%;direction:ltr;text-align:left;font-size:12px" onclick="this.select()">
+    <div class="toolbar" style="margin-top:10px">
+      <button class="btn" id="invCopy">העתקת הקישור</button>
+      <button class="btn ghost hide" id="invShare">שיתוף…</button>
+    </div>
+    <p class="sub" style="margin:8px 0 0">⚠️ הקישור והקוד הזה נותנים גישה מלאה לנתונים. לא לפרסם ולא להעלות לקבוצות.</p>
+  </div>`;
+}
 function viewSettings(){
   const sy=S.sync;
   return `
@@ -1062,6 +1252,7 @@ function viewSettings(){
         <button class="btn" id="syTest">בדיקת חיבור והפעלה</button>
       </div>`}
   </div>
+  ${sy.on?inviteCard():''}
 
   <div class="card">
     <h2>💾 גיבוי ושחזור</h2>
@@ -1097,6 +1288,19 @@ function wireSettings(){
     if(S.members.length<=1){toast('חייב להישאר לפחות אדם אחד');return}
     removeRec('members',b.dataset.id);save();render()});
 
+  const qb=document.getElementById('qrBox');
+  if(qb){try{qb.innerHTML=QR.svg(inviteLink(),210)}
+    catch(e){qb.innerHTML='<p class="sub">לא ניתן להציג קוד QR — השתמשו בקישור שמתחת.</p>'}}
+  const ic=document.getElementById('invCopy');
+  if(ic)ic.onclick=async()=>{
+    const L=inviteLink();
+    try{await navigator.clipboard.writeText(L);toast('הקישור הועתק ✓')}
+    catch(e){const f=document.getElementById('invLink');f.select();
+      try{document.execCommand('copy');toast('הקישור הועתק ✓')}catch(e2){toast('בחרו את הקישור והעתיקו ידנית')}}};
+  const ish=document.getElementById('invShare');
+  if(ish&&navigator.share){ish.classList.remove('hide');
+    ish.onclick=()=>navigator.share({title:'הכיס המשפחתי',url:inviteLink()}).catch(()=>{})}
+
   const ib=document.getElementById('installBtn');
   if(ib)ib.onclick=async()=>{
     if(!deferredInstall)return;
@@ -1107,16 +1311,13 @@ function wireSettings(){
   /* הדבקה של קישור הזמנה שלם לתוך שדה הכתובת — מחלצים ממנו כתובת וקוד */
   const su=document.getElementById('syUrl');
   if(su)su.oninput=()=>{
-    const v=su.value.trim(), h=v.indexOf('#');
-    if(h<0||!/[#&]u=/.test(v))return;
-    const p={};v.slice(h+1).split('&').forEach(s=>{const k=s.indexOf('=');if(k>0)p[s.slice(0,k)]=s.slice(k+1)});
-    const dec=s=>{try{return decodeURIComponent(escape(atob(
-      decodeURIComponent(s).replace(/-/g,'+').replace(/_/g,'/'))))}catch(e){return ''}};
-    const u=p.u?dec(p.u):'';
-    if(u.indexOf('http')!==0)return;
-    su.value=u;
-    const c=p.c?dec(p.c):'', ce=document.getElementById('syCode');
-    if(c&&ce&&!ce.value.trim())ce.value=c;
+    const v=su.value.trim();
+    if(v.indexOf('#')<0)return;
+    const p=parseInvite(v);
+    if(p.url.indexOf('http')!==0)return;
+    su.value=p.url;
+    const ce=document.getElementById('syCode');
+    if(p.code&&ce&&!ce.value.trim())ce.value=p.code;
     toast('פרטי החיבור חולצו מהקישור ✓');
   };
 

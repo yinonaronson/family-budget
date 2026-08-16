@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הכיס המשפחתי</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:#f4f4f1;color:#0b0b0b;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}
+  .box{max-width:460px;text-align:center;background:#fcfcfb;border:1px solid rgba(11,11,11,.1);
+    border-radius:14px;padding:28px 24px;box-shadow:0 1px 2px rgba(11,11,11,.06),0 8px 24px rgba(11,11,11,.05)}
+  h1{font-size:19px;margin:0 0 8px}
+  p{color:#52514e;font-size:14.5px;line-height:1.6;margin:0 0 16px}
+  a.btn{display:inline-block;background:#2a78d6;color:#fff;text-decoration:none;
+    border-radius:11px;padding:11px 22px;font-weight:600;font-size:14.5px}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>רגע, מעבירים אתכם…</h1>
+  <p id="msg">הקישור הגיע במבנה קצת שונה. מנסים לשחזר אותו אוטומטית.</p>
+  <a class="btn" id="go" href="/family-budget/">פתיחת הכיס המשפחתי</a>
+</div>
+<script>
+/* כשקישור הזמנה מגיע מקוטע — למשל כשאפליקציית ההודעות הפכה את # ל-%23,
+   או כשהפרמטרים הודבקו כנתיב או כמחרוזת שאילתה — מרכיבים אותו מחדש ומפנים. */
+(function(){
+  var base = location.pathname.indexOf('/family-budget') === 0 ? '/family-budget/' : '/';
+  var go   = document.getElementById('go');
+  go.href  = base;
+
+  var raw = decodeURIComponent(location.pathname) + location.search + location.hash;
+  var i   = raw.indexOf('#');
+  if (i < 0) { i = raw.indexOf('?'); }
+  var frag = '';
+  if (i >= 0) { frag = raw.slice(i + 1); }
+  else {
+    /* ...family-budget/s=AK...&c=... — הפרמטרים נדבקו לנתיב בלי מפריד */
+    var m = raw.match(/(?:^|\/)((?:s|u)=[^/]+)$/);
+    if (m) frag = m[1];
+  }
+
+  /* משאירים רק פרמטרים מוכרים, כדי לא להפנות לשום דבר שהגיע מבחוץ */
+  var keep = [];
+  frag.split('&').forEach(function (p) {
+    if (/^(s|u|c)=[A-Za-z0-9_\-%.]+$/.test(p)) keep.push(p);
+  });
+
+  var target = base + (keep.length ? '#' + keep.join('&') : '');
+  go.href = target;
+  if (keep.length) document.getElementById('msg').textContent =
+    'שחזרנו את קישור ההזמנה. מעבירים אתכם לאפליקציה…';
+  setTimeout(function(){ location.replace(target); }, 600);
+})();
+</script>
+</body>
+</html>
