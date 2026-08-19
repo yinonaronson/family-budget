@@ -502,7 +502,7 @@ const store={
 function defaultState(){
   const c=(icon,name,budget,slot,freq)=>({id:uid(),icon,name,budget,slot,freq:freq||1,mt:now()});
   return {
-    onboarded:false, updatedAt:now(), deleted:{},
+    onboarded:false, updatedAt:now(), deleted:{}, resetAt:0,
     sync:{url:'',code:'',on:false,last:0},
     lastExport:0,
     members:[{id:uid(),name:'אני',slot:1,mt:now()},{id:uid(),name:'בן/בת זוג',slot:2,mt:now()}],
@@ -641,6 +641,16 @@ function wouldWipe(local,del){
 }
 function mergeState(local,remote){
   if(!remote||!remote.categories)return local;
+
+  /* איפוס מכוון שנעשה במכשיר אחר — מקבלים אותו במלואו, בלי הבלם */
+  if((remote.resetAt||0)>(local.resetAt||0)){
+    const keep=local.sync;
+    const out=Object.assign({},remote);
+    out.sync=keep;out.resetAt=remote.resetAt;
+    setTimeout(()=>toast('בוצע איפוס במכשיר אחר — המכשיר הזה עודכן בהתאם'),400);
+    return out;
+  }
+
   const del={};
   [local.deleted||{},remote.deleted||{}].forEach(d=>Object.entries(d).forEach(([id,t])=>{if(!del[id]||t>del[id])del[id]=t}));
 
@@ -664,6 +674,7 @@ function mergeState(local,remote){
   out.onboarded=local.onboarded||remote.onboarded;
   out.sync=local.sync;
   out.lastExport=Math.max(local.lastExport||0,remote.lastExport||0);
+  out.resetAt=Math.max(local.resetAt||0,remote.resetAt||0);
   out.updatedAt=Math.max(local.updatedAt||0,remote.updatedAt||0);
   return out;
 }
@@ -1364,8 +1375,20 @@ function viewSettings(){
     <h2>🧭 מדריך ההקמה</h2>
     <div class="toolbar">
       <button class="btn ghost" id="rerunWiz">הפעלת המדריך</button>
-      <button class="btn danger" id="resetBtn">איפוס כל הנתונים</button>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>🧨 התחלה מחדש</h2>
+    <p class="sub">מוחק את התקציב ומתחיל מדף חלק. <b>כדאי להוריד גיבוי קודם</b> — אין דרך לבטל.</p>
+    <div class="toolbar">
+      <button class="btn ghost" id="resetBtn">רק במכשיר הזה</button>
+      ${sy.on?`<button class="btn danger" id="resetAllBtn">בכל המכשירים ובגיליון</button>`:''}
+    </div>
+    <p class="sub" style="margin:8px 0 0">
+      <b>רק במכשיר הזה</b> — מנקה כאן. אם הסנכרון דלוק, הנתונים יחזרו מהגיליון בסנכרון הבא.<br>
+      ${sy.on?'<b>בכל המכשירים</b> — מוחק גם בגיליון וגם בטלפון ובכל מכשיר מחובר. זו ההתחלה מחדש האמיתית.':''}
+    </p>
   </div>`;
 }
 function dl(name,txt,type){const a=document.createElement('a');
@@ -1476,8 +1499,35 @@ function wireSettings(){
     r.readAsText(f)};
   document.getElementById('rerunWiz').onclick=()=>startWizard();
   document.getElementById('resetBtn').onclick=()=>{
-    if(!confirm('לאפס את כל הנתונים במכשיר הזה? הפעולה אינה הפיכה.'))return;
+    if(!confirm('לאפס את הנתונים במכשיר הזה? הפעולה אינה הפיכה.'))return;
     const keepSync=S.sync;S=defaultState();S.sync=keepSync;save(false);startWizard()};
+
+  const ra=document.getElementById('resetAllBtn');
+  if(ra)ra.onclick=async()=>{
+    const n=S.tx.length;
+    if(!confirm(`מחיקה מלאה בכל המכשירים ובגיליון.\n\nיימחקו ${n} תנועות, ${S.categories.length} קטגוריות וכל ההגדרות — גם בטלפון וגם בכל מכשיר מחובר.\n\nאין דרך לבטל. להמשיך?`))return;
+    if(!confirm('בטוחים? זו ההזדמנות האחרונה לרדת מזה ולהוריד גיבוי.'))return;
+    ra.disabled=true;ra.textContent='מוחק…';
+    const ok=await factoryReset();
+    if(!ok){ra.disabled=false;ra.textContent='בכל המכשירים ובגיליון';toast('המחיקה נכשלה — בדקו חיבור ונסו שוב')}
+  };
+}
+
+/* מחיקה מכוונת בכל המכשירים: מסמנים הכול כמחוק, מסמנים חותמת איפוס
+   שגורמת לשאר המכשירים לקבל את זה למרות בלם המחיקה, ומתחילים מדף חלק. */
+async function factoryReset(){
+  const stamp=now();
+  ['tx','categories','incomeCats','members','recurring'].forEach(k=>S[k].slice().forEach(r=>removeRec(k,r.id)));
+  S.resetAt=stamp;S.loadedMonths=[];S.onboarded=false;S.lastExport=0;
+  save(false);
+  if(S.sync.on&&!(await syncNow(true)))return false;     // שידור המחיקה
+  const keepSync=S.sync, keepDel=S.deleted;
+  S=defaultState();S.sync=keepSync;S.deleted=keepDel;S.resetAt=stamp;
+  save(false);
+  if(S.sync.on)await syncNow(true);                      // הבסיס הנקי החדש
+  render();startWizard();
+  toast('הכול נמחק. מתחילים מחדש ✓');
+  return true;
 }
 
 /* ==================== אשף ==================== */
