@@ -1214,6 +1214,67 @@ function inviteCard(){
     <p class="sub" style="margin:8px 0 0">⚠️ הקישור והקוד הזה נותנים גישה מלאה לנתונים. לא לפרסם ולא להעלות לקבוצות.</p>
   </div>`;
 }
+/* ==================== בדיקת תקינות ==================== */
+async function healthReport(){
+  const L=[];
+  const add=(ok,label,val)=>L.push({ok,label,val:String(val)});
+
+  /* מאיפה האפליקציה רצה */
+  const where = location.protocol==='file:'
+    ? 'קובץ מקומי במחשב (file://)'
+    : (STANDALONE?'אפליקציה מותקנת · ':'דפדפן · ')+location.origin+location.pathname;
+  add(location.protocol!=='file:', 'רץ מ', where);
+
+  /* האם האחסון באמת עובד — כתיבה, קריאה, מחיקה */
+  let storeOk=false, storeMsg='';
+  try{
+    const k='__health__'+Math.random().toString(36).slice(2);
+    localStorage.setItem(k,'ok');
+    storeOk = localStorage.getItem(k)==='ok';
+    localStorage.removeItem(k);
+    storeMsg = storeOk?'כתיבה וקריאה עובדות':'הכתיבה לא נשמרה — ייתכן שהדפדפן חוסם';
+  }catch(e){ storeMsg='חסום לגמרי ('+(e.name||'שגיאה')+') — גלישה בסתר או חסימת אחסון'; }
+  add(storeOk,'אחסון בדפדפן',storeMsg);
+
+  /* מה באמת שמור עכשיו */
+  let raw='';try{raw=localStorage.getItem(KEY)||''}catch(e){}
+  let saved=null;try{saved=JSON.parse(raw||'null')}catch(e){}
+  add(!!saved,'נתונים שמורים במכשיר', saved
+    ? `${(saved.tx||[]).length} תנועות · ${(saved.categories||[]).length} קטגוריות · ${Math.round(raw.length/1024)} ק"ב`
+    : 'אין — האחסון ריק');
+  add(true,'נשמר לאחרונה', saved&&saved.updatedAt?new Date(saved.updatedAt).toLocaleString('he-IL'):'—');
+  const memMatch = !!saved && (saved.tx||[]).length===S.tx.length;
+  add(memMatch,'מה שעל המסך תואם למה ששמור', memMatch?'כן':'לא — יש שינוי שלא נשמר');
+
+  /* האם הדפדפן עלול למחוק את האחסון */
+  try{
+    if(navigator.storage&&navigator.storage.persisted){
+      const per=await navigator.storage.persisted();
+      add(true,'אחסון מוגן ממחיקה אוטומטית', per?'כן':'לא מובטח (רגיל — הדפדפן עלול לפנות מקום)');
+    }
+    if(navigator.storage&&navigator.storage.estimate){
+      const est=await navigator.storage.estimate();
+      if(est&&est.quota)add(true,'מקום פנוי',Math.round((est.quota-(est.usage||0))/1048576)+' מ"ב');
+    }
+  }catch(e){}
+
+  /* סנכרון */
+  add(S.sync.on,'סנכרון', S.sync.on
+    ? 'דלוק · אחרון: '+(S.sync.last?new Date(S.sync.last).toLocaleTimeString('he-IL'):'עדיין לא')
+    : 'כבוי — הנתונים קיימים רק במכשיר הזה');
+
+  if(S.sync.on&&S.sync.url){
+    try{
+      const r=await fetch(S.sync.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({code:S.sync.code,pull:true})});
+      const d=await r.json();
+      if(d.error)add(false,'הגיליון','שגיאה: '+d.error);
+      else if(!d.state)add(false,'הגיליון','ריק — עדיין לא הועלה אליו כלום');
+      else add(true,'בגיליון יש',`${(d.state.tx||[]).length} תנועות · ${(d.state.categories||[]).length} קטגוריות`);
+    }catch(e){ add(false,'הגיליון','אין תקשורת ('+e.message+')'); }
+  }
+  return L;
+}
 function viewSettings(){
   const sy=S.sync;
   return `
@@ -1267,6 +1328,15 @@ function viewSettings(){
   </div>
 
   <div class="card">
+    <h2>🩺 בדיקת תקינות</h2>
+    <p class="sub">בודקת אם הדפדפן הזה באמת שומר את הנתונים, ואיפה הם יושבים.</p>
+    <div id="healthOut" style="font-size:13px;line-height:1.9"><span class="sub">בודק…</span></div>
+    <div class="toolbar" style="margin-top:10px">
+      <button class="btn ghost" id="healthCopy">העתקת הדוח</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>🧭 מדריך ההקמה</h2>
     <div class="toolbar">
       <button class="btn ghost" id="rerunWiz">הפעלת המדריך</button>
@@ -1287,6 +1357,27 @@ function wireSettings(){
   document.querySelectorAll('.delMem').forEach(b=>b.onclick=()=>{
     if(S.members.length<=1){toast('חייב להישאר לפחות אדם אחד');return}
     removeRec('members',b.dataset.id);save();render()});
+
+  const ho=document.getElementById('healthOut');
+  if(ho){
+    let lines=[];
+    healthReport().then(L=>{
+      lines=L;
+      ho.innerHTML=L.map(x=>`<div><span style="color:${x.ok?'var(--good-ink)':'var(--critical)'}">${x.ok?'✓':'✕'}</span>
+        <b>${esc(x.label)}:</b> ${esc(x.val)}</div>`).join('');
+      const bad=L.filter(x=>!x.ok);
+      if(bad.length)ho.innerHTML+=`<p class="sub" style="margin:10px 0 0;color:var(--critical)">
+        ${bad.length} ממצאים דורשים טיפול — לחצו "העתקת הדוח" ושלחו אותו.</p>`;
+      else ho.innerHTML+=`<p class="sub" style="margin:10px 0 0">הכול תקין. הנתונים נשמרים כמו שצריך.</p>`;
+    }).catch(e=>{ho.innerHTML='<span class="sub">הבדיקה נכשלה: '+esc(e.message)+'</span>'});
+    const hc=document.getElementById('healthCopy');
+    if(hc)hc.onclick=async()=>{
+      const txt='בדיקת תקינות — הכיס המשפחתי\n'+new Date().toLocaleString('he-IL')+'\n'+
+        lines.map(x=>(x.ok?'[V] ':'[X] ')+x.label+': '+x.val).join('\n')+
+        '\nדפדפן: '+navigator.userAgent;
+      try{await navigator.clipboard.writeText(txt);toast('הדוח הועתק ✓')}
+      catch(e){toast('לא ניתן להעתיק — צלמו מסך במקום')}};
+  }
 
   const qb=document.getElementById('qrBox');
   if(qb){try{qb.innerHTML=QR.svg(inviteLink(),210)}
