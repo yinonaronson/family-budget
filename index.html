@@ -628,10 +628,34 @@ function mergeColl(a,b,del){
   [...(a||[]),...(b||[])].forEach(r=>{const p=map.get(r.id);if(!p||(r.mt||0)>(p.mt||0))map.set(r.id,r)});
   return [...map.values()].filter(r=>!(del[r.id]&&del[r.id]>=(r.mt||0)));
 }
+/* בלם ביטחון: סנכרון לעולם לא ימחק בשקט את רוב הנתונים שבמכשיר.
+   מחיקה אמיתית שאתם עשיתם היא תמיד רשומה בודדת או כמה — לא הכול בבת אחת. */
+const WIPE_MIN=5, WIPE_FRAC=0.5;
+let lastWipeBlock=0;
+function wouldWipe(local,del){
+  let before=0,after=0;
+  ['tx','categories','incomeCats','members','recurring'].forEach(k=>{
+    (local[k]||[]).forEach(r=>{before++;if(!(del[r.id]&&del[r.id]>=(r.mt||0)))after++})});
+  const lost=before-after;
+  return {before,lost,blocked:before>0&&lost>=WIPE_MIN&&lost>=before*WIPE_FRAC};
+}
 function mergeState(local,remote){
   if(!remote||!remote.categories)return local;
   const del={};
   [local.deleted||{},remote.deleted||{}].forEach(d=>Object.entries(d).forEach(([id,t])=>{if(!del[id]||t>del[id])del[id]=t}));
+
+  const risk=wouldWipe(local,del);
+  if(risk.blocked){
+    /* מתעלמים מסימוני המחיקה שהגיעו מהגיליון, שומרים רק את שלנו */
+    Object.keys(del).forEach(id=>{if(!(local.deleted||{})[id])delete del[id]});
+    const still=wouldWipe(local,del);
+    if(still.blocked)Object.keys(del).forEach(id=>delete del[id]);
+    if(now()-lastWipeBlock>60000){
+      lastWipeBlock=now();
+      setTimeout(()=>toast(`⚠️ הסנכרון נעצר: הגיליון ניסה למחוק ${risk.lost} מתוך ${risk.before} רשומות. שום דבר לא נמחק כאן.`),400);
+    }
+  }
+
   const newer=(local.updatedAt||0)>=(remote.updatedAt||0)?local:remote;
   const out=Object.assign({},newer);
   ['tx','categories','incomeCats','members','recurring'].forEach(k=>out[k]=mergeColl(local[k],remote[k],del));
