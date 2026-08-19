@@ -1,12 +1,12 @@
 /* הכיס המשפחתי — Service Worker
    אסטרטגיה: רשת-תחילה עבור הקבצים שלנו, עם נפילה למטמון.
    כך האפליקציה תמיד מעודכנת כשיש רשת, ונפתחת כרגיל כשאין.
-   בקשות הסנכרון (POST ל-Apps Script) עוברות ישירות ולא נוגעות במטמון. */
+   בקשות ל-Supabase (מקור אחר) עוברות ישירות ולא נוגעות במטמון. */
 
-const CACHE  = 'hakis-shell-v1';
+const CACHE  = 'hakis-shell-v2';   /* גרסה 2 — מעבר לחשבונות ולשמירה בשרת */
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
-  './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'
+  './supabase.js', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'
 ];
 
 self.addEventListener('install', e => {

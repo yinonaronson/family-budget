@@ -258,6 +258,40 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
   display:flex;align-items:center;gap:12px;pointer-events:auto;max-width:92vw}
 .toast div.on{opacity:1;transform:translateY(0)}
 .toast button{background:none;border:0;color:var(--s1);font-weight:700;font-size:13.5px;filter:brightness(1.5)}
+/* ---------- מסך כניסה ---------- */
+.auth{position:fixed;inset:0;z-index:90;background:var(--plane);overflow-y:auto;display:none;
+  align-items:center;justify-content:center;padding:24px 18px}
+.auth.on{display:flex}
+.authbox{width:100%;max-width:380px;background:var(--surface-1);border:1px solid var(--ring);
+  border-radius:18px;padding:30px 24px 26px;box-shadow:var(--shadow);text-align:center}
+.authlogo{width:52px;height:52px;border-radius:16px;background:var(--s1);color:#fff;
+  display:grid;place-items:center;font-size:25px;margin:0 auto 14px}
+.authbox h1{font-size:22px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
+.authbox .f{text-align:right;margin-bottom:12px}
+.authalt{margin-top:18px;font-size:13.5px;color:var(--text-secondary);line-height:2}
+.authalt a{color:var(--s1);font-weight:600;text-decoration:none}
+.authalt a:hover{text-decoration:underline}
+.authboot{position:fixed;inset:0;z-index:95;background:var(--plane);display:grid;place-items:center;
+  text-align:center;color:var(--muted);font-size:14px}
+.authboot.off{display:none}
+
+/* ---------- הודעת אחסון ועוגיות ---------- */
+/* חוסם במכוון: זו הודעה שצריך לקרוא פעם אחת, לא באנר שאפשר לפספס */
+.ckbar{position:fixed;inset:0;z-index:100;display:none;justify-content:center;align-items:flex-end;
+  background:rgba(11,11,11,.34);backdrop-filter:blur(2px);
+  padding:14px 14px calc(14px + env(safe-area-inset-bottom))}
+.ckbar.on{display:flex}
+@media(min-width:720px){.ckbar{align-items:center}}
+.ckbox{width:100%;max-width:560px;background:var(--surface-1);border:1px solid var(--ring);
+  border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-lg)}
+.cktop{display:flex;gap:12px;align-items:flex-start}
+.cktop b{font-size:15px}
+.ckrows{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.ckrow{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.5}
+.ck-ic{flex:none;width:22px;text-align:center}
+.ck-tag{display:inline-block;background:var(--plane-2);color:var(--text-secondary);
+  border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;vertical-align:2px}
+
 </style>
 </head>
 <body>
@@ -300,7 +334,16 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 <div class="toast"><div id="toast"></div></div>
 <footer class="note" id="footNote"></footer>
 
+<div class="auth" id="auth"><div id="authIn"></div></div>
+<div class="authboot" id="boot"><div>
+  <div style="width:52px;height:52px;border-radius:16px;background:var(--s1);color:#fff;
+       display:grid;place-items:center;font-size:25px;margin:0 auto 14px">₪</div>
+  טוען…</div></div>
+<div class="ckbar" id="ckbar"></div>
+
+<script src="supabase.js"></script>
 <script>
+
 /* מקודד QR מינימלי — מצב בייטים, רמת תיקון שגיאות M. מספיק לקישור ההזמנה. */
 var QR=(function(){
   var EXP=new Array(512),LOG=new Array(256);
@@ -454,101 +497,14 @@ var QR=(function(){
   }
   return {encode:encode,svg:svg};
 })();
-</script>
 
-<script>
-/* כשהקובץ מוגש מתוך Apps Script, השרת מחליף את המחרוזת הבאה בכתובת האמיתית.
-   בקובץ עצמאי היא נשארת כמות שהיא ופשוט מתעלמים ממנה. */
-window.SYNC_URL='__SYNC_URL__';
-/* אפשר גם להעביר את פרטי החיבור בקישור עצמו, אחרי הסולמית:
-   ...index.html#u=<base64 של כתובת ה-exec>&c=<base64 של קוד המשפחה>
-   החלק שאחרי הסולמית לעולם אינו נשלח לשרת האחסון ואינו נשמר בקוד המקור. */
-const EXEC_PRE='https://script.google.com/macros/s/', EXEC_SUF='/exec';
-const b64u=function(s){try{return btoa(unescape(encodeURIComponent(s)))
-  .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}catch(e){return ''}};
-const unb64u=function(s){try{return decodeURIComponent(escape(atob(
-  decodeURIComponent(s).replace(/-/g,'+').replace(/_/g,'/'))))}catch(e){return ''}};
-function parseInvite(str){
-  const o={},i=String(str||'').indexOf('#');
-  if(i<0)return{url:'',code:''};
-  String(str).slice(i+1).split('&').forEach(function(p){
-    const k=p.indexOf('=');if(k>0)o[p.slice(0,k)]=p.slice(k+1)});
-  /* s = מזהה הפריסה בלבד (קצר); u = הכתובת המלאה ב-base64 (התאמה לאחור) */
-  const url=o.s?(EXEC_PRE+decodeURIComponent(o.s)+EXEC_SUF):(o.u?unb64u(o.u):'');
-  return {url:url,code:o.c?unb64u(o.c):''};
-}
-const LINK=parseInvite(location.hash?('#'+location.hash.replace(/^#/,'')):'');
-const SERVED_URL=(String(window.SYNC_URL).indexOf('http')===0)?window.SYNC_URL
-  :(LINK.url.indexOf('http')===0?LINK.url:'');
-
-/* ==================== התקנה כאפליקציה ==================== */
-const STANDALONE=(matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
-const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)
-  ||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-let deferredInstall=null;
-addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;
-  if(typeof tab!=='undefined'&&tab==='settings')render()});
-addEventListener('appinstalled',()=>{deferredInstall=null;
-  if(typeof toast==='function')toast('האפליקציה הותקנה ✓')});
-
-/* ==================== אחסון ומודל ==================== */
-const KEY='family-budget-v3';
-const uid=()=>Math.random().toString(36).slice(2,9);
-const now=()=>Date.now();
-const store={
-  read(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}},
-  write(v){try{localStorage.setItem(KEY,JSON.stringify(v));return true}catch(e){return false}}
+/* הכיס המשפחתי — חיבור ל-Supabase
+   שני הערכים האלה ציבוריים בכוונה ומיועדים לשבת בדפדפן.
+   ההגנה על הנתונים נשענת על ה-RLS שבבסיס הנתונים, לא על הסתרתם. */
+window.SUPA = {
+  url: 'https://qibxcfifdamhscijuppe.supabase.co',
+  key: 'sb_publishable_ldy5p5600hi6Aq9e04_koA_h7Rlkn1F'
 };
-function defaultState(){
-  const c=(icon,name,budget,slot,freq)=>({id:uid(),icon,name,budget,slot,freq:freq||1,mt:now()});
-  return {
-    onboarded:false, updatedAt:now(), deleted:{}, resetAt:0,
-    sync:{url:'',code:'',on:false,last:0},
-    lastExport:0,
-    members:[{id:uid(),name:'אני',slot:1,mt:now()},{id:uid(),name:'בן/בת זוג',slot:2,mt:now()}],
-    categories:[
-      c('🏠','משכנתא / שכר דירה',6000,1), c('🛒','סופר ומזון',3500,6), c('⛽','דלק ותחבורה',1200,7),
-      c('🎒','חינוך וחוגים',2000,8), c('🍽️','בילויים ומסעדות',900,4), c('💡','חשמל',900,3,2),
-      c('🚿','מים',400,4,2), c('🔥','גז',100,5), c('🏛️','ארנונה',1040,2,2),
-      c('🛡️','ביטוחים',800,2), c('📱','תקשורת',350,3), c('💊','בריאות ותרופות',400,1),
-      c('👕','ביגוד והנעלה',600,5), c('🐷','חיסכון והשקעות',2000,6), c('✨','שונות',500,7)
-    ],
-    incomeCats:[{id:uid(),icon:'💼',name:'משכורת',mt:now()},{id:uid(),icon:'🏦',name:'קצבאות',mt:now()},{id:uid(),icon:'➕',name:'הכנסה נוספת',mt:now()}],
-    tx:[], recurring:[], loadedMonths:[]
-  };
-}
-function migrateV2(){
-  try{const old=JSON.parse(localStorage.getItem('family-budget-v2')||'null');if(!old)return null;
-    const d=defaultState();Object.keys(d).forEach(k=>{if(old[k]===undefined)old[k]=d[k]});
-    ['tx','categories','incomeCats','members','recurring'].forEach(k=>(old[k]||[]).forEach(r=>r.mt=r.mt||now()));
-    old.categories.forEach(c=>c.freq=c.freq||1);
-    return old}catch(e){return null}
-}
-let S=store.read()||migrateV2()||defaultState();
-(function normalize(){const d=defaultState();
-  Object.keys(d).forEach(k=>{if(S[k]===undefined)S[k]=d[k]});
-  if(!S.sync)S.sync={url:'',code:'',on:false,last:0};
-  if(!S.deleted)S.deleted={};
-  S.members.forEach((m,i)=>{m.slot=m.slot||i+1;m.mt=m.mt||now()});
-  S.categories.forEach(c=>{c.icon=c.icon||'📌';c.freq=Math.max(1,+c.freq||1);c.mt=c.mt||now()});
-  S.incomeCats.forEach(c=>{c.icon=c.icon||'💰';c.mt=c.mt||now()});
-  S.tx.forEach(t=>t.mt=t.mt||now());
-  S.recurring.forEach(r=>r.mt=r.mt||now());
-  const cut=now()-120*864e5;
-  Object.entries(S.deleted).forEach(([id,t])=>{if(t<cut)delete S.deleted[id]});
-})();
-
-function save(push){
-  S.updatedAt=now();
-  if(!store.write(S))toast('שגיאה בשמירה — ייתכן שהאחסון מלא');
-  if(push!==false)schedulePush();
-}
-const touch=o=>{o.mt=now();return o};
-function removeRec(coll,id){S[coll]=S[coll].filter(r=>r.id!==id);S.deleted[id]=now()}
-
-let month=new Date().toISOString().slice(0,7);
-let tab='dash', showAllCats=false, alertsOpen=false, txSearch='';
-let txFilter={cat:'',member:'',type:''};
 
 /* ==================== עזרים ==================== */
 const MONTHS=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -565,6 +521,21 @@ const sc=slot=>`var(--s${((slot-1)%8)+1})`;
 const catById=id=>S.categories.find(c=>c.id===id);
 const anyCat=id=>S.categories.find(c=>c.id===id)||S.incomeCats.find(c=>c.id===id);
 const memById=id=>S.members.find(m=>m.id===id);
+const myMemberId=()=>{
+  const id=SESSION&&SESSION.user&&SESSION.user.id;
+  return (id&&memById(id))?id:((S.members[0]||{}).id||'');
+};
+/* אנשים בבית שאין להם חשבון במערכת — נשמרים כשם חופשי על התנועה עצמה */
+const labelList=()=>[...new Set(S.tx.map(t=>t.memberLabel).filter(Boolean))].sort();
+function who(t){
+  const m=memById(t.memberId);
+  if(m)return m;
+  if(t.memberLabel){
+    const i=labelList().indexOf(t.memberLabel);
+    return {id:'lbl:'+t.memberLabel,name:t.memberLabel,slot:S.members.length+(i<0?0:i)+1};
+  }
+  return null;
+}
 const txOf=m=>S.tx.filter(t=>t.date.slice(0,7)===m);
 const FREQ=[[1,'חודשי'],[2,'כל חודשיים'],[3,'רבעוני'],[6,'חצי שנתי'],[12,'שנתי']];
 const freqLabel=f=>(FREQ.find(x=>x[0]===(+f||1))||FREQ[0])[1];
@@ -610,117 +581,375 @@ function toast(msg,action){
   clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),action?6000:2400);
 }
 
-/* ==================== סנכרון ==================== */
-let syncState='idle', pushTimer=null, pollTimer=null;
-function setSyncUI(){
-  const btn=document.getElementById('syncBtn'), dot=document.getElementById('syncDot');
-  btn.classList.toggle('hide',!S.sync.on);
-  dot.className='syncdot'+(syncState==='busy'?' busy':syncState==='err'?' err':'');
-  btn.title=S.sync.on?(syncState==='err'?'שגיאת סנכרון — לחצו לניסיון נוסף':'מסונכרן · לחצו לסנכרון מיידי'):'';
-}
-function schedulePush(){
-  if(!S.sync.on||!S.sync.url)return;
-  clearTimeout(pushTimer);
-  pushTimer=setTimeout(()=>syncNow(true),1500);
-}
-function mergeColl(a,b,del){
-  const map=new Map();
-  [...(a||[]),...(b||[])].forEach(r=>{const p=map.get(r.id);if(!p||(r.mt||0)>(p.mt||0))map.set(r.id,r)});
-  return [...map.values()].filter(r=>!(del[r.id]&&del[r.id]>=(r.mt||0)));
-}
-/* בלם ביטחון: סנכרון לעולם לא ימחק בשקט את רוב הנתונים שבמכשיר.
-   מחיקה אמיתית שאתם עשיתם היא תמיד רשומה בודדת או כמה — לא הכול בבת אחת. */
-const WIPE_MIN=5, WIPE_FRAC=0.5;
-let lastWipeBlock=0;
-function wouldWipe(local,del){
-  let before=0,after=0;
-  ['tx','categories','incomeCats','members','recurring'].forEach(k=>{
-    (local[k]||[]).forEach(r=>{before++;if(!(del[r.id]&&del[r.id]>=(r.mt||0)))after++})});
-  const lost=before-after;
-  return {before,lost,blocked:before>0&&lost>=WIPE_MIN&&lost>=before*WIPE_FRAC};
-}
-function mergeState(local,remote){
-  if(!remote||!remote.categories)return local;
+/* ==================== חיבור ל-Supabase ==================== */
+/* window.SUPA מוגדר ב-config שמוטמע בראש הקובץ.
+   בבדיקות מוזרק לקוח מזויף ב-window.__FAKE_SUPA, וכל השאר זהה. */
+let sb=null, SESSION=null, HH=null;   /* HH = המשפחה הפעילה */
 
-  /* איפוס מכוון שנעשה במכשיר אחר — מקבלים אותו במלואו, בלי הבלם */
-  if((remote.resetAt||0)>(local.resetAt||0)){
-    const keep=local.sync;
-    const out=Object.assign({},remote);
-    out.sync=keep;out.resetAt=remote.resetAt;
-    setTimeout(()=>toast('בוצע איפוס במכשיר אחר — המכשיר הזה עודכן בהתאם'),400);
-    return out;
-  }
-
-  const del={};
-  [local.deleted||{},remote.deleted||{}].forEach(d=>Object.entries(d).forEach(([id,t])=>{if(!del[id]||t>del[id])del[id]=t}));
-
-  const risk=wouldWipe(local,del);
-  if(risk.blocked){
-    /* מתעלמים מסימוני המחיקה שהגיעו מהגיליון, שומרים רק את שלנו */
-    Object.keys(del).forEach(id=>{if(!(local.deleted||{})[id])delete del[id]});
-    const still=wouldWipe(local,del);
-    if(still.blocked)Object.keys(del).forEach(id=>delete del[id]);
-    if(now()-lastWipeBlock>60000){
-      lastWipeBlock=now();
-      setTimeout(()=>toast(`⚠️ הסנכרון נעצר: הגיליון ניסה למחוק ${risk.lost} מתוך ${risk.before} רשומות. שום דבר לא נמחק כאן.`),400);
-    }
-  }
-
-  const newer=(local.updatedAt||0)>=(remote.updatedAt||0)?local:remote;
-  const out=Object.assign({},newer);
-  ['tx','categories','incomeCats','members','recurring'].forEach(k=>out[k]=mergeColl(local[k],remote[k],del));
-  out.deleted=del;
-  out.loadedMonths=[...new Set([...(local.loadedMonths||[]),...(remote.loadedMonths||[])])];
-  out.onboarded=local.onboarded||remote.onboarded;
-  out.sync=local.sync;
-  out.lastExport=Math.max(local.lastExport||0,remote.lastExport||0);
-  out.resetAt=Math.max(local.resetAt||0,remote.resetAt||0);
-  out.updatedAt=Math.max(local.updatedAt||0,remote.updatedAt||0);
-  return out;
-}
-const strip=s=>{const o=Object.assign({},s);delete o.sync;return o};
-/* adopt=true — "הצטרפות לגיליון קיים": מושכים בלבד ומחליפים את התוכן המקומי */
-async function syncNow(silent,adopt){
-  if(!S.sync.on||!S.sync.url){if(!silent)toast('הסנכרון אינו מוגדר');return false}
-  syncState='busy';setSyncUI();
+/* ספריית Supabase יושבת אצלנו בשרת (supabase.js) ולא ב-CDN חיצוני:
+   פחות תלות בצד שלישי, והדף לא פונה לאף מקור זר בזמן הטעינה. */
+async function initClient(){
+  if(window.__FAKE_SUPA){sb=window.__FAKE_SUPA;return true}
   try{
-    const res=await fetch(S.sync.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:adopt?JSON.stringify({code:S.sync.code,pull:true}):JSON.stringify({code:S.sync.code,state:strip(S)})});
-    const data=await res.json();
-    if(data.error)throw new Error(data.error);
-    if(adopt){
-      if(data.state&&data.state.categories&&data.state.categories.length){
-        const keep=S.sync;S=data.state;S.sync=keep;S.sync.last=now();
-        (function(){const d=defaultState();Object.keys(d).forEach(k=>{if(S[k]===undefined)S[k]=d[k]})})();
-        store.write(S);syncState='idle';setSyncUI();render();
-        if(!silent)toast('הצטרפתם לגיליון — הנתונים נטענו ✓');
-        return true;
+    let lib=window.supabase;
+    if(!lib||!lib.createClient)lib=await import('https://esm.sh/@supabase/supabase-js@2');
+    sb=lib.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true}});
+    return !!sb;
+  }catch(e){lastError=e.message||String(e);return false}
+}
+
+/* ==================== מצב ==================== */
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16)}));
+const now=()=>Date.now();
+
+function emptyState(){
+  return {categories:[],incomeCats:[],members:[],tx:[],recurring:[],loadedMonths:[],onboarded:false};
+}
+let S=emptyState();
+
+/* מה שהשתנה ועוד לא נכתב לשרת */
+const DIRTY=new Set();
+const GONE=[];
+let flushTimer=null, flushing=false, lastError=null;
+
+const COLLS=[['tx','transactions'],['categories','categories'],
+             ['incomeCats','categories'],['members','household_members'],
+             ['recurring','recurring']];
+function collOf(o){
+  for(const [k,t] of COLLS) if(S[k].indexOf(o)>=0) return {coll:k,table:t};
+  return null;
+}
+
+/* touch נקרא בכל מקום שבו הקוד משנה רשומה — זה הקרס שלנו */
+const touch=o=>{o.mt=now();DIRTY.add(o);return o};
+
+function removeRec(coll,id){
+  const rec=S[coll].find(r=>r.id===id);
+  if(rec)DIRTY.delete(rec);
+  S[coll]=S[coll].filter(r=>r.id!==id);
+  const t=(COLLS.find(c=>c[0]===coll)||[])[1];
+  if(t&&rec)GONE.push({table:t,id,coll});
+}
+
+/* ביטול מחיקה: מוציאים את הרשומה מתור המחיקות ומחזירים אותה למקום */
+function undoRemove(coll,rec){
+  const i=GONE.findIndex(g=>g.id===rec.id);
+  if(i>=0)GONE.splice(i,1);
+  S[coll].push(touch(rec));
+  save();
+}
+
+function save(immediate){
+  clearTimeout(flushTimer);
+  if(immediate===false)return;            /* תאימות לקוד ישן שקרא save(false) */
+  flushTimer=setTimeout(flush,immediate===true?0:500);
+}
+
+/* נורית המצב בכותרת: ירוק=נשמר, צהוב=בדרך לשרת, אדום=נכשל */
+let syncState='ok';
+function setSyncUI(st){
+  if(st)syncState=st;
+  const btn=document.getElementById('syncBtn'), dot=document.getElementById('syncDot');
+  if(!btn||!dot)return;
+  const pend=DIRTY.size+GONE.length;
+  btn.classList.toggle('hide',!HH);
+  dot.className='syncdot'+(syncState==='busy'?' busy':syncState==='err'?' err':'');
+  btn.title=syncState==='err'?('השמירה נכשלה — לחצו לניסיון נוסף'+(lastError?': '+lastError:''))
+    :pend?'יש שינויים בדרך לשרת':'הכול שמור בשרת';
+}
+
+/* ---------- המרה בין צורת המסך לצורת הטבלה ---------- */
+const toRow={
+  transactions:o=>({id:o.id,household_id:HH.id,kind:o.type||'expense',amount:o.amount,
+    occurred_on:o.date,category_id:o.catId||null,member_id:o.memberId||null,
+    member_label:o.memberLabel||null,note:o.note||null,is_fixed:!!o.fixed}),
+  categories:o=>({id:o.id,household_id:HH.id,kind:o.kind||(S.incomeCats.indexOf(o)>=0?'income':'expense'),
+    name:o.name,icon:o.icon||'📌',budget:+o.budget||0,freq:Math.max(1,+o.freq||1),slot:+o.slot||1}),
+  household_members:o=>({household_id:HH.id,user_id:o.id,display_name:o.name,slot:+o.slot||1}),
+  recurring:o=>({id:o.id,household_id:HH.id,name:o.name,amount:o.amount,
+    category_id:o.catId||null,member_id:o.memberId||null,
+    day_of_month:Math.min(28,Math.max(1,+o.day||1)),active:o.active!==false}),
+};
+const fromRow={
+  transactions:r=>({id:r.id,type:r.kind,amount:+r.amount,date:r.occurred_on,catId:r.category_id,
+    memberId:r.member_id,memberLabel:r.member_label,note:r.note||'',fixed:!!r.is_fixed,mt:0}),
+  category:r=>({id:r.id,kind:r.kind,name:r.name,icon:r.icon,budget:+r.budget,
+    freq:+r.freq||1,slot:+r.slot||1,mt:0}),
+  household_members:r=>({id:r.user_id,name:r.display_name,slot:+r.slot||1,role:r.role,mt:0}),
+  recurring:r=>({id:r.id,name:r.name,amount:+r.amount,catId:r.category_id,memberId:r.member_id,
+    day:+r.day_of_month||1,active:r.active!==false,mt:0}),
+};
+
+async function flush(){
+  if(flushing||!HH||!sb)return true;
+  const dirty=[...DIRTY], gone=GONE.splice(0);
+  if(!dirty.length&&!gone.length)return true;
+  flushing=true;setSyncUI('busy');
+  try{
+    /* מחיקות קודם, כדי שהוספה מחדש של אותו שם לא תיפול על אינדקס ייחודי */
+    for(const g of gone){
+      if(g.table==='household_members'){
+        const {error}=await sb.from('household_members').delete()
+          .eq('household_id',HH.id).eq('user_id',g.id);
+        if(error)throw error;
+      }else{
+        const {error}=await sb.from(g.table).delete().eq('id',g.id);
+        if(error)throw error;
       }
-      if(!silent)toast('הגיליון עדיין ריק — המכשיר הזה יהיה המקור');
-      syncState='idle';setSyncUI();
-      return await syncNow(silent,false);
     }
-    const before=JSON.stringify([S.tx.length,S.categories.length,S.recurring.length,S.members.length]);
-    S=mergeState(S,data.state);
-    S.sync.last=now();
-    store.write(S);
-    syncState='idle';setSyncUI();
-    const after=JSON.stringify([S.tx.length,S.categories.length,S.recurring.length,S.members.length]);
-    if(before!==after){render();if(!silent)toast('סונכרן — התקבלו עדכונים ✓')}
-    else if(!silent)toast('הכול מסונכרן ✓');
+    /* קיבוץ לפי טבלה — upsert אחד לכל טבלה במקום בקשה לכל רשומה */
+    const byTable={};
+    dirty.forEach(o=>{
+      const c=collOf(o);if(!c)return;
+      (byTable[c.table]=byTable[c.table]||[]).push(toRow[c.table](o));
+    });
+    for(const [table,rows] of Object.entries(byTable)){
+      const opts=table==='household_members'?{onConflict:'household_id,user_id'}:{onConflict:'id'};
+      const {error}=await sb.from(table).upsert(rows,opts);
+      if(error)throw error;
+    }
+    dirty.forEach(o=>DIRTY.delete(o));
+    lastError=null;setSyncUI('ok');
     return true;
   }catch(e){
-    syncState='err';setSyncUI();
-    if(!silent)toast('הסנכרון נכשל: '+e.message);
+    gone.forEach(g=>GONE.push(g));       /* להחזיר לתור, לא לאבד מחיקות */
+    lastError=e.message||String(e);
+    setSyncUI('err');
+    toast('השמירה נכשלה: '+lastError);
     return false;
+  }finally{flushing=false}
+}
+
+/* ==================== טעינה ==================== */
+async function loadHousehold(){
+  const {data:mem,error:e1}=await sb.from('household_members')
+    .select('household_id,display_name,role,slot,households(id,name,onboarded)').limit(1);
+  if(e1)throw e1;
+  if(!mem||!mem.length){HH=null;return null}
+  const row=mem[0], h=row.households||{};
+  HH={id:row.household_id,name:h.name||'המשפחה שלי',onboarded:!!h.onboarded,role:row.role};
+  return HH;
+}
+
+async function loadAll(){
+  if(!HH)return;
+  const [cats,txs,recs,mems,months]=await Promise.all([
+    sb.from('categories').select('*').eq('household_id',HH.id).eq('archived',false),
+    sb.from('transactions').select('*').eq('household_id',HH.id).order('occurred_on',{ascending:false}),
+    sb.from('recurring').select('*').eq('household_id',HH.id),
+    sb.from('household_members').select('*').eq('household_id',HH.id),
+    sb.from('loaded_months').select('month').eq('household_id',HH.id),
+  ]);
+  for(const r of [cats,txs,recs,mems,months]) if(r.error) throw r.error;
+  const all=(cats.data||[]).map(fromRow.category);
+  S.categories = all.filter(c=>c.kind==='expense').sort((a,b)=>a.slot-b.slot);
+  S.incomeCats = all.filter(c=>c.kind==='income');
+  S.tx         = (txs.data||[]).map(fromRow.transactions);
+  S.recurring  = (recs.data||[]).map(fromRow.recurring);
+  S.members    = (mems.data||[]).map(fromRow.household_members).sort((a,b)=>a.slot-b.slot);
+  S.loadedMonths=(months.data||[]).map(r=>r.month);
+  S.onboarded  = !!(HH&&HH.onboarded);
+  DIRTY.clear();GONE.length=0;
+}
+
+/* מסמנים ברמת המשפחה שההקמה הסתיימה — כדי שהאשף לא יקפוץ בכל מכשיר */
+async function markOnboarded(){
+  if(!HH||HH.onboarded)return;
+  HH.onboarded=true;S.onboarded=true;
+  try{await sb.from('households').update({onboarded:true}).eq('id',HH.id)}catch(e){}
+}
+
+async function markMonthLoaded(m){
+  if(S.loadedMonths.includes(m))return;
+  S.loadedMonths.push(m);
+  try{await sb.from('loaded_months').upsert({household_id:HH.id,month:m},{onConflict:'household_id,month'})}catch(e){}
+}
+
+/* ==================== הקמת משפחה ==================== */
+const DEFAULT_CATS=[
+  ['🏠','משכנתא / שכר דירה',6000,1,1], ['🛒','סופר ומזון',3500,6,1], ['⛽','דלק ותחבורה',1200,7,1],
+  ['🎒','חינוך וחוגים',2000,8,1], ['🍽️','בילויים ומסעדות',900,4,1], ['💡','חשמל',900,3,2],
+  ['🚿','מים',400,4,2], ['🔥','גז',100,5,1], ['🏛️','ארנונה',1040,2,2],
+  ['🛡️','ביטוחים',800,2,1], ['📱','תקשורת',350,3,1], ['💊','בריאות ותרופות',400,1,1],
+  ['👕','ביגוד והנעלה',600,5,1], ['🐷','חיסכון והשקעות',2000,6,1], ['✨','שונות',500,7,1]
+];
+const DEFAULT_INCOME=[['💼','משכורת'],['🏦','קצבאות'],['➕','הכנסה נוספת']];
+
+async function createHousehold(name,displayName){
+  const hid=uid();
+  const {error:e1}=await sb.from('households').insert({id:hid,name:name||'המשפחה שלי',created_by:SESSION.user.id});
+  if(e1)throw e1;
+  const {error:e2}=await sb.from('household_members').insert({
+    household_id:hid,user_id:SESSION.user.id,display_name:displayName||'אני',role:'owner',slot:1});
+  if(e2)throw e2;
+  const rows=DEFAULT_CATS.map(([icon,n,b,slot,freq])=>
+      ({id:uid(),household_id:hid,kind:'expense',icon,name:n,budget:b,slot,freq}))
+    .concat(DEFAULT_INCOME.map(([icon,n],i)=>
+      ({id:uid(),household_id:hid,kind:'income',icon,name:n,budget:0,slot:i+1,freq:1})));
+  const {error:e3}=await sb.from('categories').insert(rows);
+  if(e3)throw e3;
+  HH={id:hid,name:name||'המשפחה שלי'};
+  await loadAll();
+  return HH;
+}
+
+/* ==================== הזמנות ==================== */
+async function createInvite(){
+  const token=uid();
+  const {error}=await sb.from('invites').insert({token,household_id:HH.id,created_by:SESSION.user.id});
+  if(error)throw error;
+  return location.origin+location.pathname+'#join='+token;
+}
+async function redeemInvite(token,displayName){
+  const {data,error}=await sb.rpc('redeem_invite',{p_token:token,p_display_name:displayName||'בן משפחה'});
+  if(error)throw error;
+  return data;
+}
+
+/* ==================== מסכי כניסה ==================== */
+let authMode='in', authBusy=false, pendingInvite=null;
+
+const AUTH_MSG={
+  'Invalid login credentials':'המייל או הסיסמה אינם נכונים',
+  'Email not confirmed':'צריך לאשר את המייל — שלחנו לכם קישור',
+  'User already registered':'המייל הזה כבר רשום. נסו להתחבר',
+  'Password should be at least 6 characters':'הסיסמה חייבת להיות באורך 6 תווים לפחות',
+};
+const authErr=m=>AUTH_MSG[m]||m||'משהו השתבש';
+
+function showAuth(){
+  document.getElementById('auth').classList.add('on');
+  document.body.style.overflow='hidden';
+  drawAuth();
+}
+function hideAuth(){
+  document.getElementById('auth').classList.remove('on');
+  document.body.style.overflow='';
+}
+
+function drawAuth(){
+  const inv=pendingInvite?`<p class="sub" style="background:color-mix(in srgb,var(--s1) 10%,transparent);
+      border-radius:10px;padding:10px 12px;margin:0 0 14px">
+      🎉 הוזמנתם למשפחה. ${authMode==='up'?'צרו חשבון':'התחברו'} וההזמנה תמומש אוטומטית.</p>`:'';
+
+  document.getElementById('authIn').innerHTML=`
+    <div class="authbox">
+      <div class="authlogo">₪</div>
+      <h1>הכיס המשפחתי</h1>
+      <p class="sub" style="margin:0 0 18px">${authMode==='up'?'יצירת חשבון חדש':'כניסה לחשבון'}</p>
+      ${inv}
+      <label class="f">אימייל
+        <input id="aEmail" type="email" inputmode="email" autocomplete="email" dir="ltr"
+               style="text-align:left" placeholder="you@example.com"></label>
+      ${authMode==='up'?`<label class="f">איך קוראים לכם?
+        <input id="aName" autocomplete="name" placeholder="השם שיוצג לבני המשפחה"></label>`:''}
+      <label class="f">סיסמה
+        <input id="aPass" type="password" dir="ltr" style="text-align:left"
+               autocomplete="${authMode==='up'?'new-password':'current-password'}"
+               placeholder="${authMode==='up'?'לפחות 6 תווים':''}"></label>
+      <p class="sub" id="aErr" style="color:var(--critical);min-height:18px;margin:6px 0 0"></p>
+      <button class="btn" id="aGo" style="width:100%;margin-top:8px">
+        ${authMode==='up'?'יצירת חשבון':'כניסה'}</button>
+      <div class="authalt">
+        ${authMode==='up'
+          ? 'כבר יש לכם חשבון? <a href="#" id="aSwitch">כניסה</a>'
+          : 'אין לכם חשבון? <a href="#" id="aSwitch">הרשמה</a>'}
+        ${authMode==='in'?'<br><a href="#" id="aForgot">שכחתי סיסמה</a>':''}
+      </div>
+    </div>`;
+
+  const err=m=>{document.getElementById('aErr').textContent=m||''};
+  const go=document.getElementById('aGo');
+
+  document.getElementById('aSwitch').onclick=e=>{e.preventDefault();authMode=authMode==='up'?'in':'up';drawAuth()};
+  const fg=document.getElementById('aForgot');
+  if(fg)fg.onclick=async e=>{
+    e.preventDefault();
+    const email=(document.getElementById('aEmail').value||'').trim();
+    if(!email){err('רשמו קודם את המייל שלכם, ואז לחצו כאן');return}
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    err('');toast(error?authErr(error.message):'שלחנו לכם קישור לאיפוס סיסמה ✓');
+  };
+
+  go.onclick=async()=>{
+    if(authBusy)return;
+    const email=(document.getElementById('aEmail').value||'').trim();
+    const pass=document.getElementById('aPass').value||'';
+    const nameEl=document.getElementById('aName');
+    const name=nameEl?(nameEl.value||'').trim():'';
+    if(!email||!pass){err('צריך מייל וסיסמה');return}
+    if(authMode==='up'&&pass.length<6){err('הסיסמה חייבת להיות באורך 6 תווים לפחות');return}
+
+    authBusy=true;go.disabled=true;go.textContent='רגע…';err('');
+    try{
+      if(authMode==='up'){
+        const {data,error}=await sb.auth.signUp({email,password:pass,
+          options:{data:{display_name:name},emailRedirectTo:location.origin+location.pathname}});
+        if(error)throw error;
+        if(!data.session){
+          document.getElementById('authIn').innerHTML=`
+            <div class="authbox">
+              <div class="authlogo">✉️</div>
+              <h1>בדקו את המייל</h1>
+              <p class="sub">שלחנו קישור אישור ל־<b dir="ltr">${esc(email)}</b>.
+                 לחצו עליו וחזרו לכאן.</p>
+            </div>`;
+          return;
+        }
+        SESSION=data.session;
+        await afterAuth(name);
+      }else{
+        const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+        if(error)throw error;
+        SESSION=data.session;
+        await afterAuth(name);
+      }
+    }catch(e){err(authErr(e.message))}
+    finally{authBusy=false;go.disabled=false;go.textContent=authMode==='up'?'יצירת חשבון':'כניסה'}
+  };
+
+  setTimeout(()=>{const el=document.getElementById('aEmail');if(el)el.focus()},60);
+}
+
+/* אחרי כניסה מוצלחת: מימוש הזמנה אם יש, טעינת המשפחה, ואם אין — הקמה */
+async function afterAuth(nameHint){
+  if(pendingInvite){
+    try{
+      await redeemInvite(pendingInvite,nameHint||displayNameGuess());
+      toast('הצטרפתם למשפחה ✓');
+    }catch(e){
+      toast('ההזמנה כבר לא תקפה: '+(e.message||''));
+    }
+    pendingInvite=null;clearInvite();
+    history.replaceState(null,'',location.pathname);
   }
+  await loadHousehold();
+  if(!HH){
+    hideAuth();
+    await createHousehold('המשפחה שלי',nameHint||displayNameGuess());
+    render();startWizard();
+    return;
+  }
+  await loadAll();
+  hideAuth();
+  render();
+  if(!S.onboarded)startWizard();
 }
-function startPolling(){
-  clearInterval(pollTimer);
-  if(!S.sync.on)return;
-  pollTimer=setInterval(()=>{if(!document.hidden)syncNow(true)},30000);
+
+function displayNameGuess(){
+  const m=SESSION&&SESSION.user&&SESSION.user.user_metadata;
+  if(m&&m.display_name)return m.display_name;
+  const e=SESSION&&SESSION.user&&SESSION.user.email;
+  return e?e.split('@')[0]:'אני';
 }
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.sync.on)syncNow(true)});
+
+async function signOut(){
+  try{await sb.auth.signOut()}catch(e){}
+  SESSION=null;HH=null;S=emptyState();DIRTY.clear();GONE.length=0;
+  render();showAuth();
+}
 
 /* ==================== ניווט ==================== */
 const NAV=[['dash','📊','דשבורד'],['tx','📝','תנועות'],['budget','🎯','תקציב'],['fixed','🔁','קבועות'],['settings','⚙️','הגדרות']];
@@ -732,9 +961,9 @@ function go(t){tab=t;render();window.scrollTo({top:0})}
 function render(){
   document.getElementById('mLbl').textContent=monthLabel(month);
   renderNav();setSyncUI();
-  document.getElementById('footNote').innerHTML=S.sync.on
-    ?`מסונכרן עם הגיליון שלכם${S.sync.last?` · עדכון אחרון ${new Date(S.sync.last).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}`:''}`
-    :'הנתונים נשמרים בדפדפן הזה בלבד. כדאי לייצא גיבוי מדי פעם — הגדרות ← ייצוא.';
+  document.getElementById('footNote').innerHTML=HH
+    ?`${esc(HH.name)} · הנתונים שמורים בשרת ומסונכרנים בין כל המכשירים`
+    :'';
   document.getElementById('view').innerHTML=({dash:viewDash,tx:viewTx,budget:viewBudget,fixed:viewFixed,settings:viewSettings})[tab]();
   ({dash:wireDash,tx:wireTx,budget:wireBudget,fixed:wireFixed,settings:wireSettings})[tab]();
 }
@@ -768,13 +997,12 @@ function viewDash(){
     near.forEach(c=>list+=`<div class="row warn"><span>${c.icon}</span><span><b>${esc(c.name)}</b> — נותרו ${money(c.budget-use[c.id].sp)}.</span></div>`);
     list+='</div>';
   }
+  /* בהזמנה של בן משפחה אין טעם להציק על גיבויים — הנתונים בשרת. */
   let backup='';
-  if(!S.sync.on&&S.tx.length>15){
-    const days=S.lastExport?Math.floor((now()-S.lastExport)/864e5):999;
-    if(days>=30)backup=`<button class="alertbar info" id="backupBar"><span class="ic">💾</span>
-      <span>${S.lastExport?`לא גיביתם כבר ${days} ימים.`:'עוד לא יצרתם גיבוי.'} הנתונים קיימים רק בדפדפן הזה.</span>
-      <span class="arrow">ייצוא ←</span></button>`;
-  }
+  if(S.members.length<2&&S.tx.length>8)
+    backup=`<button class="alertbar info" id="backupBar"><span class="ic">👥</span>
+      <span>עדיין אתם לבד במשפחה. הזמינו את בן/בת הזוג כדי שתראו את אותה תמונה.</span>
+      <span class="arrow">הזמנה ←</span></button>`;
 
   const withPct=S.categories.map(c=>({c,u:use[c.id]}));
   const active=withPct.filter(x=>x.u.sp>0);
@@ -812,9 +1040,6 @@ function viewDash(){
     </div>
   </div>
 
-  ${(SERVED_URL&&!S.sync.on)?`<button class="alertbar info" id="syncHint"><span class="ic">🔄</span>
-    <span>הסנכרון עדיין כבוי במכשיר הזה. חברו אותו כדי לראות את אותם נתונים כמו בן/בת הזוג.</span>
-    <span class="arrow">חיבור ←</span></button>`:''}
   ${backup}${bar}${list}
 
   <div class="card">
@@ -873,7 +1098,7 @@ function barRow(c,u,pc){
 function txList(list){
   if(!list.length)return `<div class="empty"><span class="eic">🧾</span>אין תנועות להצגה.</div>`;
   return `<div class="tlist">${list.map(t=>{
-    const c=anyCat(t.catId), m=memById(t.memberId);
+    const c=anyCat(t.catId), m=who(t);
     return `<button class="titem editTx" data-id="${t.id}">
       <span class="av">${c?c.icon:'❓'}</span>
       <span class="mid"><span class="t1">${t.note?esc(t.note):(c?esc(c.name):'תנועה')}</span>
@@ -906,8 +1131,14 @@ function trendChart(){
   </svg>`;
 }
 function memberChart(){
-  const by={};txOf(month).filter(t=>t.type==='expense').forEach(t=>by[t.memberId||'—']=(by[t.memberId||'—']||0)+t.amount);
+  const by={},info={};
+  txOf(month).filter(t=>t.type==='expense').forEach(t=>{
+    const w=who(t), k=w?w.id:'—';
+    by[k]=(by[k]||0)+t.amount; if(w)info[k]=w;
+  });
   const rows=S.members.map(m=>({name:m.name,v:by[m.id]||0,slot:m.slot}));
+  Object.keys(by).filter(k=>String(k).indexOf('lbl:')===0)
+    .forEach(k=>rows.push({name:info[k].name,v:by[k],slot:info[k].slot}));
   if(by['—'])rows.push({name:'לא משויך',v:by['—'],slot:8});
   const tot=rows.reduce((a,r)=>a+r.v,0), max=Math.max(1,...rows.map(r=>r.v));
   if(!tot)return `<div class="empty"><span class="eic">👥</span>אין עדיין הוצאות החודש.</div>`;
@@ -926,8 +1157,7 @@ function wireDash(){
   const at=document.getElementById('alertToggle');if(at)at.onclick=()=>{alertsOpen=!alertsOpen;render()};
   const tc=document.getElementById('toggleCats');if(tc)tc.onclick=()=>{showAllCats=!showAllCats;render()};
   const al=document.getElementById('allTx');if(al)al.onclick=()=>go('tx');
-  const bb=document.getElementById('backupBar');if(bb)bb.onclick=exportBackup;
-  const sh=document.getElementById('syncHint');if(sh)sh.onclick=()=>go('settings');
+  const bb=document.getElementById('backupBar');if(bb)bb.onclick=()=>go('settings');
   wireTxClicks();
   const wrap=document.getElementById('trendWrap');if(!wrap)return;
   const tip=document.getElementById('trendTip'),svg=wrap.querySelector('svg'),cross=svg.querySelector('#trendCross');
@@ -953,7 +1183,9 @@ function wireDash(){
 /* ==================== מסך תנועה ==================== */
 let sheetOpen=false, draft=null;
 function openSheet(preset){
-  draft=Object.assign({type:'expense',amount:'',catId:'',memberId:(S.members[0]||{}).id||'',date:todayStr(),note:''},preset||{});
+  /* ברירת המחדל היא אני — מי שפותח את המסך הוא בדרך כלל מי ששילם */
+  draft=Object.assign({type:'expense',amount:'',catId:'',memberId:myMemberId(),
+    memberLabel:null,date:todayStr(),note:''},preset||{});
   sheetOpen=true;
   document.getElementById('scrim').classList.add('on');
   document.getElementById('sheet').classList.add('on');
@@ -986,7 +1218,10 @@ function drawSheet(){
       `<button data-id="${c.id}" aria-pressed="${c.id===draft.catId}"><span class="ci">${c.icon}</span>${esc(c.name)}</button>`).join('')}</div>
     <div class="fieldlbl">${draft.type==='expense'?'מי שילם':'מי קיבל'}</div>
     <div class="chipsel" id="sMem">${S.members.map(m=>
-      `<button data-id="${m.id}" aria-pressed="${m.id===draft.memberId}">${avatar(m)}${esc(m.name)}</button>`).join('')}</div>
+      `<button data-id="${m.id}" aria-pressed="${!draft.memberLabel&&m.id===draft.memberId}">${avatar(m)}${esc(m.name)}</button>`).join('')}
+      ${labelList().map((n,i)=>
+      `<button data-lbl="${esc(n)}" aria-pressed="${draft.memberLabel===n}">${avatar({name:n,slot:S.members.length+i+1})}${esc(n)}</button>`).join('')}
+      <button data-lbl="__new" aria-pressed="false">＋ מישהו אחר</button></div>
     <div class="fieldlbl">מתי</div>
     <div class="chipsel" id="sDate">
       <button data-d="${todayStr()}" aria-pressed="${draft.date===todayStr()}">היום</button>
@@ -1002,7 +1237,14 @@ function wireSheet(){
   document.querySelectorAll('#sType button').forEach(b=>b.onclick=()=>{draft.type=b.dataset.v;draft.catId='';drawSheet()});
   document.querySelectorAll('#pad button').forEach(b=>b.onclick=()=>key(b.dataset.k));
   document.querySelectorAll('#sCats button').forEach(b=>b.onclick=()=>{draft.catId=b.dataset.id;drawSheet()});
-  document.querySelectorAll('#sMem button').forEach(b=>b.onclick=()=>{draft.memberId=b.dataset.id;drawSheet()});
+  document.querySelectorAll('#sMem button').forEach(b=>b.onclick=()=>{
+    if(b.dataset.lbl==='__new'){
+      const n=(prompt('שם האדם (מישהו שאין לו חשבון במערכת):')||'').trim();
+      if(!n)return;
+      draft.memberId=null;draft.memberLabel=n;
+    }else if(b.dataset.lbl){draft.memberId=null;draft.memberLabel=b.dataset.lbl}
+    else{draft.memberId=b.dataset.id;draft.memberLabel=null}
+    drawSheet()});
   document.querySelectorAll('#sDate button').forEach(b=>b.onclick=()=>{draft.date=b.dataset.d;drawSheet()});
   document.getElementById('sDateIn').onchange=e=>{draft.date=e.target.value||todayStr();drawSheet()};
   document.getElementById('sNote').oninput=e=>draft.note=e.target.value;
@@ -1021,9 +1263,11 @@ function saveDraft(){
   const edited=!!draft.id, amount=+draft.amount, type=draft.type, dt=draft.date;
   if(edited){
     const t=S.tx.find(x=>x.id===draft.id);
-    Object.assign(t,{type,amount,catId:draft.catId,memberId:draft.memberId,date:dt,note:(draft.note||'').trim()});
+    Object.assign(t,{type,amount,catId:draft.catId,memberId:draft.memberId||null,
+      memberLabel:draft.memberLabel||null,date:dt,note:(draft.note||'').trim()});
     touch(t);
-  } else S.tx.push(touch({id:uid(),type,amount,catId:draft.catId,memberId:draft.memberId,date:dt,note:(draft.note||'').trim()}));
+  } else S.tx.push(touch({id:uid(),type,amount,catId:draft.catId,memberId:draft.memberId||null,
+    memberLabel:draft.memberLabel||null,date:dt,note:(draft.note||'').trim()}));
   save();
   if(dt.slice(0,7)!==month)month=dt.slice(0,7);
   closeSheet();render();
@@ -1033,7 +1277,7 @@ function deleteDraft(){
   if(!draft.id)return;
   const backup=Object.assign({},S.tx.find(t=>t.id===draft.id));
   removeRec('tx',draft.id);save();closeSheet();render();
-  toast('התנועה נמחקה',{label:'ביטול',fn:()=>{delete S.deleted[backup.id];S.tx.push(touch(backup));save();render()}});
+  toast('התנועה נמחקה',{label:'ביטול',fn:()=>{undoRemove('tx',backup);render()}});
 }
 document.getElementById('fab').onclick=()=>openSheet();
 document.getElementById('sheetX').onclick=closeSheet;
@@ -1054,7 +1298,7 @@ function viewTx(){
   const q=txSearch.trim().toLowerCase();
   const list=txOf(month).filter(t=>{
     if(txFilter.cat&&t.catId!==txFilter.cat)return false;
-    if(txFilter.member&&t.memberId!==txFilter.member)return false;
+    if(txFilter.member){const w=who(t);if(!w||w.id!==txFilter.member)return false}
     if(txFilter.type&&t.type!==txFilter.type)return false;
     if(q){const c=anyCat(t.catId);
       if(!(((t.note||'')+' '+(c?c.name:'')+' '+t.amount).toLowerCase().includes(q)))return false}
@@ -1070,7 +1314,7 @@ function viewTx(){
     <div class="toolbar">
       <select id="flType" style="width:auto"><option value="">הכול</option><option value="expense" ${txFilter.type==='expense'?'selected':''}>הוצאות</option><option value="income" ${txFilter.type==='income'?'selected':''}>הכנסות</option></select>
       <select id="flCat" style="width:auto"><option value="">כל הקטגוריות</option>${S.categories.concat(S.incomeCats).map(c=>`<option value="${c.id}" ${txFilter.cat===c.id?'selected':''}>${c.icon} ${esc(c.name)}</option>`).join('')}</select>
-      <select id="flMem" style="width:auto"><option value="">כולם</option>${S.members.map(m=>`<option value="${m.id}" ${txFilter.member===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}</select>
+      <select id="flMem" style="width:auto"><option value="">כולם</option>${S.members.map(m=>`<option value="${m.id}" ${txFilter.member===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}${labelList().map(n=>`<option value="lbl:${esc(n)}" ${txFilter.member==='lbl:'+n?'selected':''}>${esc(n)}</option>`).join('')}</select>
       ${filtered?`<button class="btn ghost sm" id="flClear">ניקוי ✕</button>`:''}
     </div>
     ${txList(list)}
@@ -1137,16 +1381,17 @@ function wireBudget(){
   document.querySelectorAll('.delCat').forEach(b=>b.onclick=()=>{
     const c=Object.assign({},catById(b.dataset.id));
     removeRec('categories',b.dataset.id);save();render();
-    toast(`"${c.name}" נמחקה`,{label:'ביטול',fn:()=>{delete S.deleted[c.id];S.categories.push(touch(c));save();render()}});
+    toast(`"${c.name}" נמחקה`,{label:'ביטול',fn:()=>{undoRemove('categories',c);render()}});
   });
   document.getElementById('addCat').onclick=()=>{
     const n=document.getElementById('newCat').value.trim();if(!n)return;
-    S.categories.push(touch({id:uid(),icon:document.getElementById('newCatIcon').value.trim()||'📌',name:n,
+    S.categories.push(touch({id:uid(),kind:'expense',icon:document.getElementById('newCatIcon').value.trim()||'📌',name:n,
       budget:+document.getElementById('newCatBud').value||0,slot:S.categories.length+1,freq:1}));
     save();render();toast('הקטגוריה נוספה ✓')};
   document.getElementById('addInc').onclick=()=>{
     const n=document.getElementById('newInc').value.trim();if(!n)return;
-    S.incomeCats.push(touch({id:uid(),icon:'💰',name:n}));save();render()};
+    S.incomeCats.push(touch({id:uid(),kind:'income',icon:'💰',name:n,budget:0,freq:1,
+      slot:S.incomeCats.length+1}));save();render()};
   document.querySelectorAll('.delInc').forEach(b=>b.onclick=()=>{removeRec('incomeCats',b.dataset.id);save();render()});
 }
 
@@ -1198,372 +1443,321 @@ function wireFixed(){
     if(S.loadedMonths.includes(month)&&!confirm('הקבועות כבר נטענו לחודש זה. לטעון שוב? ייווצרו תנועות כפולות.'))return;
     act.forEach(r=>S.tx.push(touch({id:uid(),type:'expense',amount:+r.amount,date:`${month}-${String(r.day||1).padStart(2,'0')}`,
       catId:r.catId,memberId:r.memberId,note:r.name,fixed:true})));
-    if(!S.loadedMonths.includes(month))S.loadedMonths.push(month);
+    markMonthLoaded(month);
     save();go('dash');toast(`${act.length} הוצאות קבועות נטענו ✓`)};
 }
+
+/* ==================== הגדרות ==================== */
 
 /* ==================== הגדרות ==================== */
 function installCard(){
   if(STANDALONE)return `
   <div class="card">
     <h2>📲 מותקנת כאפליקציה</h2>
-    <p class="sub">אתם עובדים מהאייקון שבמסך הבית. היא נפתחת גם בלי חיבור לאינטרנט, ומסתנכרנת ברגע שהחיבור חוזר.</p>
+    <p class="sub">אתם עובדים מהאייקון שבמסך הבית.</p>
   </div>`;
   if(deferredInstall)return `
   <div class="card">
     <h2>📲 התקנה על המכשיר</h2>
-    <p class="sub">אייקון משלה במסך הבית, פתיחה במסך מלא בלי שורת כתובת, ועבודה גם בלי אינטרנט.</p>
+    <p class="sub">אייקון משלה במסך הבית, ופתיחה במסך מלא בלי שורת כתובת.</p>
     <button class="btn" id="installBtn">התקנת האפליקציה</button>
   </div>`;
   if(IS_IOS)return `
   <div class="card">
     <h2>📲 התקנה על המכשיר</h2>
-    <p class="sub">ב-Safari: כפתור השיתוף <b>⬆️</b> בתחתית המסך ← <b>הוספה למסך הבית</b>.
-    מכאן האפליקציה נפתחת עם אייקון משלה, במסך מלא, ועובדת גם בלי אינטרנט.</p>
+    <p class="sub">ב-Safari: כפתור השיתוף <b>⬆️</b> ← <b>הוספה למסך הבית</b>.</p>
   </div>`;
   return '';
 }
-/* קישור ההזמנה נבנה מהמכשיר הזה — קצר ככל האפשר כדי שלא ייחתך בשיתוף */
-function inviteLink(){
-  const u=S.sync.url||'', c=S.sync.code||'';
-  if(!u||!c)return '';
-  const base=location.origin+location.pathname;
-  const m=u.match(/^https:\/\/script\.google\.com\/macros\/s\/([^/]+)\/exec$/);
-  return base+'#'+(m?('s='+m[1]):('u='+b64u(u)))+'&c='+b64u(c);
-}
-function inviteCard(){
-  const L=inviteLink();
-  if(!L)return '';
-  return `
-  <div class="card">
-    <h2>📱 חיבור מכשיר נוסף</h2>
-    <p class="sub">הדרך הבטוחה ביותר: לסרוק את הקוד במצלמה של הטלפון. אפשר גם להעתיק את הקישור —
-      אבל אל תקלידו אותו ידנית, הוא ארוך ורגיש לטעות אחת.</p>
-    <div id="qrBox" style="display:flex;justify-content:center;padding:6px 0 12px"></div>
-    <input id="invLink" readonly value="${esc(L)}"
-      style="width:100%;direction:ltr;text-align:left;font-size:12px" onclick="this.select()">
-    <div class="toolbar" style="margin-top:10px">
-      <button class="btn" id="invCopy">העתקת הקישור</button>
-      <button class="btn ghost hide" id="invShare">שיתוף…</button>
-    </div>
-    <p class="sub" style="margin:8px 0 0">⚠️ הקישור והקוד הזה נותנים גישה מלאה לנתונים. לא לפרסם ולא להעלות לקבוצות.</p>
-  </div>`;
-}
-/* ==================== בדיקת תקינות ==================== */
-async function healthReport(){
-  const L=[];
-  const add=(ok,label,val)=>L.push({ok,label,val:String(val)});
 
-  /* מאיפה האפליקציה רצה */
-  const where = location.protocol==='file:'
-    ? 'קובץ מקומי במחשב (file://)'
-    : (STANDALONE?'אפליקציה מותקנת · ':'דפדפן · ')+location.origin+location.pathname;
-  add(location.protocol!=='file:', 'רץ מ', where);
-
-  /* האם האחסון באמת עובד — כתיבה, קריאה, מחיקה */
-  let storeOk=false, storeMsg='';
-  try{
-    const k='__health__'+Math.random().toString(36).slice(2);
-    localStorage.setItem(k,'ok');
-    storeOk = localStorage.getItem(k)==='ok';
-    localStorage.removeItem(k);
-    storeMsg = storeOk?'כתיבה וקריאה עובדות':'הכתיבה לא נשמרה — ייתכן שהדפדפן חוסם';
-  }catch(e){ storeMsg='חסום לגמרי ('+(e.name||'שגיאה')+') — גלישה בסתר או חסימת אחסון'; }
-  add(storeOk,'אחסון בדפדפן',storeMsg);
-
-  /* מה באמת שמור עכשיו */
-  let raw='';try{raw=localStorage.getItem(KEY)||''}catch(e){}
-  let saved=null;try{saved=JSON.parse(raw||'null')}catch(e){}
-  add(!!saved,'נתונים שמורים במכשיר', saved
-    ? `${(saved.tx||[]).length} תנועות · ${(saved.categories||[]).length} קטגוריות · ${Math.round(raw.length/1024)} ק"ב`
-    : 'אין — האחסון ריק');
-  add(true,'נשמר לאחרונה', saved&&saved.updatedAt?new Date(saved.updatedAt).toLocaleString('he-IL'):'—');
-  const memMatch = !!saved && (saved.tx||[]).length===S.tx.length;
-  add(memMatch,'מה שעל המסך תואם למה ששמור', memMatch?'כן':'לא — יש שינוי שלא נשמר');
-
-  /* האם הדפדפן עלול למחוק את האחסון */
-  try{
-    if(navigator.storage&&navigator.storage.persisted){
-      const per=await navigator.storage.persisted();
-      add(true,'אחסון מוגן ממחיקה אוטומטית', per?'כן':'לא מובטח (רגיל — הדפדפן עלול לפנות מקום)');
-    }
-    if(navigator.storage&&navigator.storage.estimate){
-      const est=await navigator.storage.estimate();
-      if(est&&est.quota)add(true,'מקום פנוי',Math.round((est.quota-(est.usage||0))/1048576)+' מ"ב');
-    }
-  }catch(e){}
-
-  /* סנכרון */
-  add(S.sync.on,'סנכרון', S.sync.on
-    ? 'דלוק · אחרון: '+(S.sync.last?new Date(S.sync.last).toLocaleTimeString('he-IL'):'עדיין לא')
-    : 'כבוי — הנתונים קיימים רק במכשיר הזה');
-
-  if(S.sync.on&&S.sync.url){
-    try{
-      const r=await fetch(S.sync.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify({code:S.sync.code,pull:true})});
-      const d=await r.json();
-      if(d.error)add(false,'הגיליון','שגיאה: '+d.error);
-      else if(!d.state)add(false,'הגיליון','ריק — עדיין לא הועלה אליו כלום');
-      else add(true,'בגיליון יש',`${(d.state.tx||[]).length} תנועות · ${(d.state.categories||[]).length} קטגוריות`);
-    }catch(e){ add(false,'הגיליון','אין תקשורת ('+e.message+')'); }
-  }
-  return L;
-}
 function viewSettings(){
-  const sy=S.sync;
+  const me=SESSION&&SESSION.user;
   return `
   ${installCard()}
+
+  <div class="card">
+    <h2>👤 החשבון שלי</h2>
+    <p class="sub" dir="ltr" style="text-align:right">${esc(me?me.email:'')}</p>
+    <div class="toolbar">
+      <button class="btn ghost" id="signOutBtn">התנתקות</button>
+      <button class="btn ghost" id="pwBtn">שינוי סיסמה</button>
+    </div>
+  </div>
+
   <div class="card">
     <h2>👥 בני המשפחה</h2>
-    <p class="sub">כל תנועה משויכת לאדם — כך רואים מי הוציא מה</p>
+    <p class="sub">כל תנועה משויכת לאדם — כך רואים מי הוציא מה. בן משפחה מצטרף דרך קישור הזמנה, ומקבל חשבון משלו.</p>
     <div class="chipsel" style="margin-bottom:13px">${S.members.map(m=>
       `<span style="display:inline-flex;align-items:center;gap:7px;background:var(--plane);border:1px solid var(--ring);border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:600">
-        ${avatar(m)}${esc(m.name)} <b class="delMem" data-id="${m.id}" style="color:var(--muted);cursor:pointer">✕</b></span>`).join('')}</div>
-    <div class="toolbar"><input id="newMem" placeholder="שם" style="max-width:180px"><button class="btn" id="addMem">הוספה</button></div>
+        ${avatar(m)}${esc(m.name)}${m.role==='owner'?' <b style="color:var(--muted);font-weight:600">· מנהל</b>':''}
+        ${m.id===(me&&me.id)?' <b style="color:var(--muted);font-weight:600">· אני</b>':''}</span>`).join('')}</div>
+    <button class="btn" id="invBtn">הזמנת בן משפחה</button>
+    <div id="invOut" style="margin-top:14px"></div>
   </div>
 
   <div class="card">
-    <h2>🔄 סנכרון בין המכשירים</h2>
-    ${sy.on?`
-      <p class="sub">מחובר לגיליון שלכם. כל שינוי נשלח אוטומטית, והמכשיר מושך עדכונים כל 30 שניות.
-        ${sy.last?`<br>סנכרון אחרון: ${new Date(sy.last).toLocaleString('he-IL')}`:''}</p>
-      <div class="toolbar">
-        <button class="btn" id="syncNowBtn">סנכרון עכשיו</button>
-        <button class="btn ghost" id="syncEdit">שינוי הגדרות</button>
-        <button class="btn ghost" id="syncOff">ניתוק</button>
-      </div>`:`
-      <p class="sub">${SERVED_URL
-        ?'האפליקציה נפתחה מתוך הגיליון שלכם, אז הכתובת כבר מולאה. נשאר רק להזין את קוד המשפחה ולבחור את תפקיד המכשיר.'
-        :'כדי ששניכם תראו את אותם נתונים, מחברים את האפליקציה לגיליון Google שלכם. ההגדרה נעשית פעם אחת; ההוראות המלאות נשלחו בנפרד.'}</p>
-      <div class="grid" style="grid-template-columns:1fr;gap:10px;max-width:540px">
-        <label class="f">כתובת ה-Web App (מסתיימת ב-<code>/exec</code>)<input id="syUrl" value="${esc(sy.url||SERVED_URL)}" placeholder="https://script.google.com/macros/s/..../exec"></label>
-        <label class="f">קוד משפחה (אותו קוד בשני המכשירים)<input id="syCode" value="${esc(sy.code||LINK.code)}" placeholder="למשל: aronson2026"></label>
-        <div class="fieldlbl" style="margin:4px 0 0">מה תפקיד המכשיר הזה?</div>
-        <div class="seg" id="syMode">
-          <button data-v="create" aria-pressed="true">זה המכשיר הראשון</button>
-          <button data-v="join" aria-pressed="false">מצטרף לגיליון קיים</button>
-        </div>
-        <p class="sub" id="syModeNote" style="margin:0">הנתונים שכאן יועלו לגיליון ויהיו הבסיס.</p>
-        <button class="btn" id="syTest">בדיקת חיבור והפעלה</button>
-      </div>`}
-  </div>
-  ${sy.on?inviteCard():''}
-
-  <div class="card">
-    <h2>💾 גיבוי ושחזור</h2>
-    <p class="sub">${sy.on?'הנתונים מגובים גם בגיליון, אבל ייצוא מקומי תמיד שווה.':'הנתונים נשמרים בדפדפן הזה בלבד.'}
-      ${S.lastExport?`ייצוא אחרון: ${new Date(S.lastExport).toLocaleDateString('he-IL')}`:'עדיין לא נוצר גיבוי.'}</p>
+    <h2>💾 ייצוא</h2>
+    <p class="sub">הנתונים שמורים בבסיס הנתונים שלכם ומגובים אוטומטית. ייצוא נועד לניתוח באקסל, לא לגיבוי.</p>
     <div class="toolbar">
-      <button class="btn" id="expBtn">ייצוא גיבוי</button>
       <button class="btn ghost" id="expCsv">ייצוא ל-Excel (CSV)</button>
-      <label class="btn ghost" style="cursor:pointer">ייבוא מקובץ<input type="file" id="impFile" accept=".json" class="hide"></label>
+      <button class="btn ghost" id="expBtn">ייצוא JSON</button>
     </div>
     <p class="sub" style="margin:4px 0 0">${S.tx.length} תנועות · ${S.categories.length} קטגוריות · ${S.recurring.length} הוראות קבע</p>
   </div>
 
+  ${cookieCard()}
+
   <div class="card">
-    <h2>🩺 בדיקת תקינות</h2>
-    <p class="sub">בודקת אם הדפדפן הזה באמת שומר את הנתונים, ואיפה הם יושבים.</p>
+    <h2>🩺 מצב המערכת</h2>
     <div id="healthOut" style="font-size:13px;line-height:1.9"><span class="sub">בודק…</span></div>
-    <div class="toolbar" style="margin-top:10px">
-      <button class="btn ghost" id="healthCopy">העתקת הדוח</button>
-    </div>
   </div>
 
   <div class="card">
     <h2>🧭 מדריך ההקמה</h2>
-    <div class="toolbar">
-      <button class="btn ghost" id="rerunWiz">הפעלת המדריך</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>🧨 התחלה מחדש</h2>
-    <p class="sub">מוחק את התקציב ומתחיל מדף חלק. <b>כדאי להוריד גיבוי קודם</b> — אין דרך לבטל.</p>
-    <div class="toolbar">
-      <button class="btn ghost" id="resetBtn">רק במכשיר הזה</button>
-      ${sy.on?`<button class="btn danger" id="resetAllBtn">בכל המכשירים ובגיליון</button>`:''}
-    </div>
-    <p class="sub" style="margin:8px 0 0">
-      <b>רק במכשיר הזה</b> — מנקה כאן. אם הסנכרון דלוק, הנתונים יחזרו מהגיליון בסנכרון הבא.<br>
-      ${sy.on?'<b>בכל המכשירים</b> — מוחק גם בגיליון וגם בטלפון ובכל מכשיר מחובר. זו ההתחלה מחדש האמיתית.':''}
-    </p>
+    <div class="toolbar"><button class="btn ghost" id="rerunWiz">הפעלת המדריך</button></div>
   </div>`;
 }
-function dl(name,txt,type){const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
-function exportBackup(){
-  dl(`גיבוי-תקציב-${month}.json`,JSON.stringify(S,null,2),'application/json');
-  S.lastExport=now();save(false);render();toast('הגיבוי הורד ✓');
+
+async function healthReport(){
+  const L=[];const add=(ok,label,val)=>L.push({ok,label,val:String(val)});
+  add(!!SESSION,'מחוברים כ', SESSION?SESSION.user.email:'לא מחוברים');
+  add(!!HH,'משפחה', HH?HH.name:'—');
+  add(true,'נתונים', `${S.tx.length} תנועות · ${S.categories.length} קטגוריות · ${S.members.length} בני משפחה`);
+  const pend=DIRTY.size+GONE.length;
+  add(pend===0,'ממתין לשמירה', pend?`${pend} שינויים בדרך לשרת`:'הכול נשמר');
+  add(!lastError,'שגיאה אחרונה', lastError||'אין');
+  add(navigator.onLine,'חיבור לאינטרנט', navigator.onLine?'מחובר':'מנותק');
+  try{
+    const t0=performance.now();
+    const {error}=await sb.from('households').select('id').limit(1);
+    add(!error,'תקשורת עם השרת', error?error.message:Math.round(performance.now()-t0)+' מ״ש');
+  }catch(e){add(false,'תקשורת עם השרת',e.message)}
+  return L;
 }
+
 function wireSettings(){
-  document.getElementById('addMem').onclick=()=>{
-    const n=document.getElementById('newMem').value.trim();if(!n)return;
-    S.members.push(touch({id:uid(),name:n,slot:S.members.length+1}));save();render();toast('נוסף ✓')};
-  document.querySelectorAll('.delMem').forEach(b=>b.onclick=()=>{
-    if(S.members.length<=1){toast('חייב להישאר לפחות אדם אחד');return}
-    removeRec('members',b.dataset.id);save();render()});
-
+  wireCookieCard();
   const ho=document.getElementById('healthOut');
-  if(ho){
-    let lines=[];
-    healthReport().then(L=>{
-      lines=L;
-      ho.innerHTML=L.map(x=>`<div><span style="color:${x.ok?'var(--good-ink)':'var(--critical)'}">${x.ok?'✓':'✕'}</span>
-        <b>${esc(x.label)}:</b> ${esc(x.val)}</div>`).join('');
-      const bad=L.filter(x=>!x.ok);
-      if(bad.length)ho.innerHTML+=`<p class="sub" style="margin:10px 0 0;color:var(--critical)">
-        ${bad.length} ממצאים דורשים טיפול — לחצו "העתקת הדוח" ושלחו אותו.</p>`;
-      else ho.innerHTML+=`<p class="sub" style="margin:10px 0 0">הכול תקין. הנתונים נשמרים כמו שצריך.</p>`;
-    }).catch(e=>{ho.innerHTML='<span class="sub">הבדיקה נכשלה: '+esc(e.message)+'</span>'});
-    const hc=document.getElementById('healthCopy');
-    if(hc)hc.onclick=async()=>{
-      const txt='בדיקת תקינות — הכיס המשפחתי\n'+new Date().toLocaleString('he-IL')+'\n'+
-        lines.map(x=>(x.ok?'[V] ':'[X] ')+x.label+': '+x.val).join('\n')+
-        '\nדפדפן: '+navigator.userAgent;
-      try{await navigator.clipboard.writeText(txt);toast('הדוח הועתק ✓')}
-      catch(e){toast('לא ניתן להעתיק — צלמו מסך במקום')}};
-  }
+  if(ho)healthReport().then(L=>{
+    ho.innerHTML=L.map(x=>`<div><span style="color:${x.ok?'var(--good-ink)':'var(--critical)'}">${x.ok?'✓':'✕'}</span>
+      <b>${esc(x.label)}:</b> ${esc(x.val)}</div>`).join('');
+  }).catch(e=>{ho.innerHTML='<span class="sub">הבדיקה נכשלה</span>'});
 
-  const qb=document.getElementById('qrBox');
-  if(qb){try{qb.innerHTML=QR.svg(inviteLink(),210)}
-    catch(e){qb.innerHTML='<p class="sub">לא ניתן להציג קוד QR — השתמשו בקישור שמתחת.</p>'}}
-  const ic=document.getElementById('invCopy');
-  if(ic)ic.onclick=async()=>{
-    const L=inviteLink();
-    try{await navigator.clipboard.writeText(L);toast('הקישור הועתק ✓')}
-    catch(e){const f=document.getElementById('invLink');f.select();
-      try{document.execCommand('copy');toast('הקישור הועתק ✓')}catch(e2){toast('בחרו את הקישור והעתיקו ידנית')}}};
-  const ish=document.getElementById('invShare');
-  if(ish&&navigator.share){ish.classList.remove('hide');
-    ish.onclick=()=>navigator.share({title:'הכיס המשפחתי',url:inviteLink()}).catch(()=>{})}
+  const so=document.getElementById('signOutBtn');
+  if(so)so.onclick=async()=>{
+    if(DIRTY.size||GONE.length){toast('רגע, שומר…');await flush()}
+    if(confirm('להתנתק מהחשבון?'))signOut();
+  };
+
+  const pw=document.getElementById('pwBtn');
+  if(pw)pw.onclick=async()=>{
+    const email=SESSION&&SESSION.user&&SESSION.user.email;
+    if(!email)return;
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    toast(error?('שגיאה: '+error.message):'שלחנו לכם קישור לשינוי סיסמה ✓');
+  };
 
   const ib=document.getElementById('installBtn');
   if(ib)ib.onclick=async()=>{
     if(!deferredInstall)return;
     ib.disabled=true;deferredInstall.prompt();
     try{await deferredInstall.userChoice}catch(e){}
-    deferredInstall=null;render()};
-
-  /* הדבקה של קישור הזמנה שלם לתוך שדה הכתובת — מחלצים ממנו כתובת וקוד */
-  const su=document.getElementById('syUrl');
-  if(su)su.oninput=()=>{
-    const v=su.value.trim();
-    if(v.indexOf('#')<0)return;
-    const p=parseInvite(v);
-    if(p.url.indexOf('http')!==0)return;
-    su.value=p.url;
-    const ce=document.getElementById('syCode');
-    if(p.code&&ce&&!ce.value.trim())ce.value=p.code;
-    toast('פרטי החיבור חולצו מהקישור ✓');
+    deferredInstall=null;render();
   };
 
-  let syMode='create';
-  document.querySelectorAll('#syMode button').forEach(b=>b.onclick=()=>{
-    syMode=b.dataset.v;
-    document.querySelectorAll('#syMode button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
-    document.getElementById('syModeNote').textContent=syMode==='create'
-      ?'הנתונים שכאן יועלו לגיליון ויהיו הבסיס.'
-      :'⚠️ הנתונים שבגיליון יחליפו את מה שקיים במכשיר הזה. בחרו באפשרות הזו במכשיר של בן/בת הזוג.';
+  const inv=document.getElementById('invBtn');
+  if(inv)inv.onclick=async()=>{
+    inv.disabled=true;inv.textContent='מייצר…';
+    try{
+      const link=await createInvite();
+      const out=document.getElementById('invOut');
+      let qr='';
+      try{qr=QR.svg(link,190)}catch(e){}
+      out.innerHTML=`
+        <div style="display:flex;justify-content:center;padding:4px 0 12px">${qr}</div>
+        <input id="invLink" readonly value="${esc(link)}"
+          style="width:100%;direction:ltr;text-align:left;font-size:12px" onclick="this.select()">
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn" id="invCopy">העתקת הקישור</button>
+          <button class="btn ghost hide" id="invShare">שיתוף…</button>
+        </div>
+        <p class="sub" style="margin:8px 0 0">הקישור תקף 14 יום ומתבטל אחרי שימוש אחד.
+          מי שפותח אותו יתבקש ליצור חשבון, ויצטרף למשפחה שלכם.</p>`;
+      const c=document.getElementById('invCopy');
+      c.onclick=async()=>{
+        try{await navigator.clipboard.writeText(link);toast('הקישור הועתק ✓')}
+        catch(e){document.getElementById('invLink').select();toast('בחרו והעתיקו ידנית')}};
+      const sh=document.getElementById('invShare');
+      if(navigator.share){sh.classList.remove('hide');
+        sh.onclick=()=>navigator.share({title:'הכיס המשפחתי',url:link}).catch(()=>{})}
+    }catch(e){toast('יצירת ההזמנה נכשלה: '+(e.message||''))}
+    finally{inv.disabled=false;inv.textContent='הזמנת בן משפחה'}
+  };
+
+  const rw=document.getElementById('rerunWiz');
+  if(rw)rw.onclick=()=>startWizard();
+  const eb=document.getElementById('expBtn');
+  if(eb)eb.onclick=()=>exportBackup();
+  const ec=document.getElementById('expCsv');
+  if(ec)ec.onclick=()=>exportCsv();
+}
+
+function dl(name,txt,type){const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type}));a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportBackup(){
+  dl(`הכיס-המשפחתי-${thisMonth()}.json`,JSON.stringify(
+    {household:HH,categories:S.categories,incomeCats:S.incomeCats,members:S.members,
+     tx:S.tx,recurring:S.recurring},null,2),'application/json');
+  toast('הקובץ הורד ✓');
+}
+function exportCsv(){
+  const head=['תאריך','סוג','קטגוריה','מי','תיאור','סכום'];
+  const rows=S.tx.slice().sort((a,b)=>a.date<b.date?1:-1).map(t=>{
+    const c=anyCat(t.catId),m=memById(t.memberId);
+    return [t.date,t.type==='income'?'הכנסה':'הוצאה',c?c.name:'',
+            m?m.name:(t.memberLabel||''),t.note||'',t.amount];
   });
-  const test=document.getElementById('syTest');
-  if(test)test.onclick=async()=>{
-    const url=document.getElementById('syUrl').value.trim(), code=document.getElementById('syCode').value.trim();
-    if(url!==SERVED_URL&&!/^https:\/\/script\.google\.com\/.*\/exec$/.test(url)){
-      toast('הכתובת צריכה להתחיל ב-https://script.google.com ולהסתיים ב-/exec');return}
-    if(!code){toast('נא להזין קוד משפחה');return}
-    if(syMode==='join'&&S.tx.length&&!confirm('הנתונים שבגיליון יחליפו את התנועות שקיימות במכשיר הזה. להמשיך?'))return;
-    S.sync={url,code,on:true,last:0};
-    test.disabled=true;test.textContent='בודק…';
-    const ok=await syncNow(false,syMode==='join');
-    if(ok){save(false);startPolling();render()}
-    else{S.sync.on=false;test.disabled=false;test.textContent='בדיקת חיבור והפעלה'}
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  dl(`תנועות-${thisMonth()}.csv`,[head,...rows].map(r=>r.map(q).join(',')).join('\n'),'text/csv;charset=utf-8');
+  toast('הקובץ הורד ✓');
+}
+
+/* ==================== הודעת אחסון ועוגיות ====================
+   האפליקציה לא מריצה פרסום, לא מדידה ולא צד שלישי, ולכן אין כאן
+   "עוגיות שיווקיות" לאשר או לדחות. מה שכן — צריך להגיד לאנשים
+   בדיוק מה נשמר אצלם במכשיר ולמה. */
+const COOKIE_KEY='hakis-cookie-notice-v1';
+const cookieAck=()=>{try{return localStorage.getItem(COOKIE_KEY)||''}catch(e){return 'x'}};
+
+const COOKIE_ROWS=[
+  ['🔐','חיבור לחשבון','שומר שאתם מחוברים כדי שלא תצטרכו להקליד סיסמה בכל פתיחה. נמחק ביציאה מהחשבון.','הכרחי'],
+  ['◐','ערכת נושא','זוכר אם בחרתם מצב בהיר או כהה.','העדפה'],
+  ['✉️','הזמנה ממתינה','אם הגעתם מקישור הזמנה, הוא נשמר עד להשלמת ההרשמה ואז נמחק.','הכרחי'],
+];
+
+function cookieDetailsHtml(){
+  return `<div class="ckrows">${COOKIE_ROWS.map(([ic,t,d,k])=>`
+    <div class="ckrow"><span class="ck-ic">${ic}</span>
+      <span><b>${t}</b> <span class="ck-tag">${k}</span><br><span class="sub">${d}</span></span></div>`).join('')}
+    </div>
+    <p class="sub" style="margin:12px 0 0">אין באפליקציה עוגיות פרסום, מדידה או מעקב, ואיננו משתפים מידע עם צד שלישי
+      למטרות שיווק. הנתונים הפיננסיים עצמם אינם נשמרים במכשיר אלא בבסיס הנתונים שלנו,
+      ונגישים רק לבני המשפחה שלכם.</p>`;
+}
+
+function showCookieBar(){
+  if(cookieAck())return;
+  const el=document.getElementById('ckbar');
+  el.innerHTML=`
+    <div class="ckbox">
+      <div class="cktop">
+        <span class="ck-ic" style="font-size:20px">🍪</span>
+        <div>
+          <b>אחסון במכשיר שלכם</b>
+          <p class="sub" style="margin:3px 0 0">אנחנו שומרים במכשיר רק את מה שנדרש כדי שהאפליקציה תעבוד —
+            שתישארו מחוברים ושנזכור את ההעדפות שלכם. בלי פרסום, בלי מעקב, בלי צד שלישי.</p>
+        </div>
+      </div>
+      <div id="ckDetails" class="hide">${cookieDetailsHtml()}</div>
+      <div class="toolbar" style="margin-top:12px">
+        <button class="btn" id="ckOk">הבנתי</button>
+        <button class="btn ghost" id="ckMore">מה בדיוק נשמר?</button>
+      </div>
+    </div>`;
+  el.classList.add('on');
+  document.getElementById('ckOk').onclick=()=>{
+    try{localStorage.setItem(COOKIE_KEY,new Date().toISOString())}catch(e){}
+    el.classList.remove('on');el.innerHTML='';
   };
-  const sn=document.getElementById('syncNowBtn');if(sn)sn.onclick=()=>syncNow(false);
-  const se=document.getElementById('syncEdit');if(se)se.onclick=()=>{S.sync.on=false;save(false);render()};
-  const so=document.getElementById('syncOff');if(so)so.onclick=()=>{
-    if(!confirm('לנתק את הסנכרון? הנתונים יישארו במכשיר הזה ובגיליון.'))return;
-    S.sync={url:'',code:'',on:false,last:0};save(false);clearInterval(pollTimer);render()};
-
-  document.getElementById('expBtn').onclick=exportBackup;
-  document.getElementById('expCsv').onclick=()=>{
-    const rows=[['תאריך','סוג','קטגוריה','מי','תיאור','סכום']].concat(S.tx.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>{
-      const c=anyCat(t.catId);return[t.date,t.type==='income'?'הכנסה':'הוצאה',c?c.name:'',(memById(t.memberId)||{}).name||'',t.note||'',t.amount]}));
-    dl(`תנועות-${month}.csv`,rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');toast('הקובץ הורד ✓')};
-  document.getElementById('impFile').onchange=e=>{
-    const f=e.target.files[0];if(!f)return;const r=new FileReader();
-    r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.categories)throw 0;
-      const keepSync=S.sync;S=mergeState(S,d);S.sync=keepSync;
-      save();render();toast('הנתונים יובאו ומוזגו ✓')}catch(err){toast('הקובץ אינו תקין')}};
-    r.readAsText(f)};
-  document.getElementById('rerunWiz').onclick=()=>startWizard();
-  document.getElementById('resetBtn').onclick=()=>{
-    if(!confirm('לאפס את הנתונים במכשיר הזה? הפעולה אינה הפיכה.'))return;
-    const keepSync=S.sync;S=defaultState();S.sync=keepSync;save(false);startWizard()};
-
-  const ra=document.getElementById('resetAllBtn');
-  if(ra)ra.onclick=async()=>{
-    const n=S.tx.length;
-    if(!confirm(`מחיקה מלאה בכל המכשירים ובגיליון.\n\nיימחקו ${n} תנועות, ${S.categories.length} קטגוריות וכל ההגדרות — גם בטלפון וגם בכל מכשיר מחובר.\n\nאין דרך לבטל. להמשיך?`))return;
-    if(!confirm('בטוחים? זו ההזדמנות האחרונה לרדת מזה ולהוריד גיבוי.'))return;
-    ra.disabled=true;ra.textContent='מוחק…';
-    const ok=await factoryReset();
-    if(!ok){ra.disabled=false;ra.textContent='בכל המכשירים ובגיליון';toast('המחיקה נכשלה — בדקו חיבור ונסו שוב')}
+  document.getElementById('ckMore').onclick=e=>{
+    const d=document.getElementById('ckDetails'), open=!d.classList.contains('hide');
+    d.classList.toggle('hide',open);
+    e.target.textContent=open?'מה בדיוק נשמר?':'סגירת הפירוט';
   };
 }
 
-/* מחיקה מכוונת בכל המכשירים: מסמנים הכול כמחוק, מסמנים חותמת איפוס
-   שגורמת לשאר המכשירים לקבל את זה למרות בלם המחיקה, ומתחילים מדף חלק. */
-async function factoryReset(){
-  const stamp=now();
-  ['tx','categories','incomeCats','members','recurring'].forEach(k=>S[k].slice().forEach(r=>removeRec(k,r.id)));
-  S.resetAt=stamp;S.loadedMonths=[];S.onboarded=false;S.lastExport=0;
-  save(false);
-  if(S.sync.on&&!(await syncNow(true)))return false;     // שידור המחיקה
-  const keepSync=S.sync, keepDel=S.deleted;
-  S=defaultState();S.sync=keepSync;S.deleted=keepDel;S.resetAt=stamp;
-  save(false);
-  if(S.sync.on)await syncNow(true);                      // הבסיס הנקי החדש
-  render();startWizard();
-  toast('הכול נמחק. מתחילים מחדש ✓');
-  return true;
+/* אותו מידע, זמין תמיד — לא רק בפעם הראשונה */
+function cookieCard(){
+  const when=cookieAck();
+  return `
+  <div class="card">
+    <h2>🍪 אחסון ופרטיות</h2>
+    <p class="sub">מה נשמר במכשיר שלכם, ולמה. אין כאן עוגיות פרסום או מעקב.</p>
+    ${cookieDetailsHtml()}
+    ${when&&when!=='x'?`<p class="sub" style="margin:12px 0 0">אישרתם את ההודעה ב-${new Date(when).toLocaleDateString('he-IL')}.</p>`:''}
+    <div class="toolbar" style="margin-top:10px">
+      <button class="btn ghost" id="ckClear">ניקוי האחסון המקומי והתנתקות</button>
+    </div>
+    <p class="sub" style="margin:8px 0 0">הניקוי מוחק רק את מה ששמור בדפדפן הזה.
+      התקציב עצמו נשאר בבסיס הנתונים וייטען שוב בכניסה הבאה.</p>
+  </div>`;
 }
 
-/* ==================== אשף ==================== */
-let wz={step:0,names:[],incomes:{},fixed:{},budgets:{}};
+function wireCookieCard(){
+  const b=document.getElementById('ckClear');
+  if(b)b.onclick=async()=>{
+    if(!confirm('לנקות את האחסון המקומי ולהתנתק?\n\nהתקציב עצמו לא נמחק — הוא שמור בשרת.'))return;
+    if(DIRTY.size||GONE.length)await flush();
+    try{[COOKIE_KEY,THEME_KEY,INV_KEY].forEach(k=>localStorage.removeItem(k))}catch(e){}
+    signOut();
+    setTimeout(showCookieBar,300);
+  };
+}
+
+/* ==================== אשף ====================
+   במערכת עם משתמשים, "בני משפחה" הם חשבונות — מצטרפים דרך קישור הזמנה.
+   האשף שואל רק על מה שהוא באמת יכול לקבוע: השם שלכם, ההכנסות,
+   הקבועות והתקציבים. */
+let wz={step:0,myName:'',earners:[],incomes:{},fixed:{},budgets:{}};
 const FIXED_SUGGEST=[['🏠','משכנתא / שכר דירה'],['🏛️','ארנונה'],['💡','חשמל'],['🚿','מים'],['🛡️','ביטוחים'],['📱','תקשורת'],['🎒','חינוך וחוגים']];
 const BUDGET_SUGGEST=['סופר ומזון','דלק ותחבורה','בילויים ומסעדות','ביגוד והנעלה','חיסכון והשקעות'];
+
+function me(){return S.members.find(m=>m.id===(SESSION&&SESSION.user&&SESSION.user.id))||S.members[0]||null}
+
 function startWizard(){
-  wz={step:0,names:S.members.map(m=>m.name),incomes:{},fixed:{},budgets:{}};
+  const m=me();
+  wz={step:0,myName:m?m.name:displayNameGuess(),
+      earners:S.members.filter(x=>!m||x.id!==m.id).map(x=>x.name),
+      incomes:{},fixed:{},budgets:{}};
   S.categories.forEach(c=>wz.budgets[c.name]=c.budget);
   document.getElementById('wiz').classList.add('on');document.body.style.overflow='hidden';drawWiz();
 }
 function endWizard(){
   document.getElementById('wiz').classList.remove('on');document.body.style.overflow='';
-  S.onboarded=true;save();go('dash');
+  markOnboarded();go('dash');
 }
 function drawWiz(){
   const el=document.getElementById('wizIn');
   const bars=n=>`<div class="steps">${[0,1,2,3].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div>`;
   const foot=(next,back)=>`<div class="foot">${back?`<button class="btn ghost" id="wBack">חזרה</button>`:''}
     <button class="btn" id="wNext" style="flex:1">${next}</button><button class="skip" id="wSkip">דילוג</button></div>`;
+
   if(wz.step===0){
     el.innerHTML=`${bars(0)}<div class="body"><h1>ברוכים הבאים 👋</h1>
-      <p class="lead">נגדיר את התקציב שלכם בארבעה צעדים קצרים — כדקה בסך הכול. אפשר לשנות הכול אחר כך.</p>
-      <div class="fieldlbl">מי מנהל את התקציב?</div>
-      ${wz.names.map((n,i)=>`<div class="rowline"><span class="ic">${['🧑','👩','🧒','👦'][i%4]}</span>
-        <input class="wName" data-i="${i}" value="${esc(n)}" placeholder="שם"></div>`).join('')}
-      <button class="linkbtn" id="wAddName">+ הוספת בן משפחה</button></div>${foot('בואו נתחיל ←',false)}`;
-    el.querySelectorAll('.wName').forEach(inp=>inp.oninput=()=>wz.names[+inp.dataset.i]=inp.value);
-    el.querySelector('#wAddName').onclick=()=>{wz.names.push('');drawWiz()};
+      <p class="lead">נגדיר את התקציב בארבעה צעדים קצרים — כדקה בסך הכול. אפשר לשנות הכול אחר כך.</p>
+      <div class="fieldlbl">איך קוראים לכם?</div>
+      <div class="rowline"><span class="ic">🧑</span>
+        <input id="wMyName" value="${esc(wz.myName)}" placeholder="השם שיוצג לבני המשפחה" style="max-width:none"></div>
+      <div class="fieldlbl">מי עוד מכניס כסף הביתה?</div>
+      <p class="sub" style="margin:0 0 10px">מספיק שם — לא צריך שיהיה להם חשבון.
+        כשתרצו שהם יוכלו לרשום הוצאות בעצמם, תשלחו להם קישור הזמנה מההגדרות.</p>
+      ${wz.earners.map((n,i)=>`<div class="rowline"><span class="ic">${['👩','🧒','👦','🧓'][i%4]}</span>
+        <input class="wEarn" data-i="${i}" value="${esc(n)}" placeholder="שם" style="max-width:none"></div>`).join('')}
+      <button class="linkbtn" id="wAddEarn">+ הוספת מפרנס/ת</button></div>${foot('בואו נתחיל ←',false)}`;
+    el.querySelector('#wMyName').oninput=e=>wz.myName=e.target.value;
+    el.querySelectorAll('.wEarn').forEach(inp=>inp.oninput=()=>wz.earners[+inp.dataset.i]=inp.value);
+    el.querySelector('#wAddEarn').onclick=()=>{wz.earners.push('');drawWiz()};
+
   } else if(wz.step===1){
+    const ppl=wizPeople();
     el.innerHTML=`${bars(1)}<div class="body"><h1>כמה נכנס בחודש? 💼</h1>
       <p class="lead">ההכנסה נטו של כל אחד. זה הבסיס לחישוב כמה נשאר בכיס.</p>
-      ${wz.names.filter(n=>n.trim()).map(n=>`<div class="rowline"><span class="ic">💼</span>
+      ${ppl.map(n=>`<div class="rowline"><span class="ic">💼</span>
         <span class="nm">${esc(n)}</span><input class="wInc" data-n="${esc(n)}" type="number" inputmode="decimal" placeholder="0" value="${wz.incomes[n]||''}"></div>`).join('')}
       </div>${foot('המשך ←',true)}`;
     el.querySelectorAll('.wInc').forEach(i=>i.oninput=()=>wz.incomes[i.dataset.n]=+i.value||0);
+
   } else if(wz.step===2){
     el.innerHTML=`${bars(2)}<div class="body"><h1>מה יוצא בכל חודש? 🔁</h1>
       <p class="lead">סמנו את ההוצאות הקבועות שלכם ומלאו סכום. הן ייטענו אוטומטית בכל חודש בלחיצה אחת.</p>
@@ -1576,6 +1770,7 @@ function drawWiz(){
       if(c.checked)wz.fixed[c.dataset.n]=wz.fixed[c.dataset.n]||0;else delete wz.fixed[c.dataset.n]});
     el.querySelectorAll('.wfAmt').forEach(a=>a.oninput=()=>{wz.fixed[a.dataset.n]=+a.value||0;
       const chk=el.querySelector(`.wfChk[data-n="${CSS.escape(a.dataset.n)}"]`);if(chk)chk.checked=true});
+
   } else {
     const inc=Object.values(wz.incomes).reduce((a,b)=>a+b,0);
     const fx=Object.values(wz.fixed).reduce((a,b)=>a+b,0), left=inc-fx;
@@ -1590,68 +1785,156 @@ function drawWiz(){
     el.querySelectorAll('.wbAmt').forEach(a=>a.oninput=()=>{wz.budgets[a.dataset.n]=+a.value||0;upd()});
     upd();
   }
+
   const nx=el.querySelector('#wNext'),bk=el.querySelector('#wBack'),sk=el.querySelector('#wSkip');
   nx.onclick=()=>{if(wz.step<3){wz.step++;drawWiz()}else applyWizard()};
   if(bk)bk.onclick=()=>{wz.step--;drawWiz()};
   sk.onclick=()=>{if(confirm('לדלג על המדריך? אפשר להפעיל אותו שוב מההגדרות.'))endWizard()};
 }
+
+/* השם שלכם ראשון, ואחריו שאר המפרנסים — בלי כפילויות ובלי ריקים */
+function wizPeople(){
+  const out=[];
+  [wz.myName].concat(wz.earners).map(n=>(n||'').trim()).forEach(n=>{
+    if(n&&out.indexOf(n)<0)out.push(n)});
+  return out;
+}
+
 function applyWizard(){
-  const names=wz.names.map(n=>n.trim()).filter(Boolean);
-  if(names.length){
-    S.members.forEach(m=>S.deleted[m.id]=now());
-    S.members=names.map((n,i)=>touch({id:uid(),name:n,slot:i+1}));
-  }
-  names.forEach((n,i)=>{const v=wz.incomes[n];
-    if(v>0)S.tx.push(touch({id:uid(),type:'income',amount:v,date:month+'-01',catId:S.incomeCats[0].id,
-      memberId:S.members[i].id,note:'משכורת'}))});
+  const mine=(wz.myName||'').trim();
+  const m=me();
+  if(m&&mine&&m.name!==mine){touch(m);m.name=mine}
+
+  /* הכנסות: לי — משויכת לחשבון; לאחרים — שם חופשי על התנועה */
+  wizPeople().forEach(n=>{
+    const v=wz.incomes[n];
+    if(!(v>0))return;
+    const isMe=m&&n===(m.name||mine);
+    S.tx.push(touch({id:uid(),type:'income',amount:v,date:month+'-01',
+      catId:(S.incomeCats[0]||{}).id||null,
+      memberId:isMe?m.id:null, memberLabel:isMe?null:n, note:'משכורת'}));
+  });
+
   Object.entries(wz.fixed).forEach(([n,v])=>{
     if(!(v>0))return;
     const c=S.categories.find(x=>x.name===n);
     if(!S.recurring.find(r=>r.name===n))
-      S.recurring.push(touch({id:uid(),name:n,amount:v,catId:c?c.id:S.categories[0].id,memberId:S.members[0].id,day:1,active:true}));
+      S.recurring.push(touch({id:uid(),name:n,amount:v,catId:c?c.id:(S.categories[0]||{}).id||null,
+        memberId:m?m.id:null,day:1,active:true}));
     if(c){touch(c);c.budget=v;c.freq=1}
   });
-  Object.entries(wz.budgets).forEach(([n,v])=>{const c=S.categories.find(x=>x.name===n);if(c&&v>0){touch(c);c.budget=v}});
-  save();
+  Object.entries(wz.budgets).forEach(([n,v])=>{
+    const c=S.categories.find(x=>x.name===n);if(c&&v>0){touch(c);c.budget=v}});
+
+  save(true);
   const n=S.recurring.filter(r=>r.active!==false).length;
   endWizard();
   toast(n?`הכול מוכן! ${n} הוצאות קבועות ממתינות לטעינה בלשונית "קבועות" 🔁`:'הכול מוכן! לחצו על ה-+ כדי לרשום הוצאה ראשונה 🎉');
 }
 
 /* ==================== אתחול ==================== */
-/* מצב רשת + Service Worker (רק כשמוגשים מהאינטרנט; בקובץ מקומי אין טעם) */
+/* מצב חשבון עולמי: month/tab/... מוגדרים כאן כי הם משותפים לכל המסכים */
+let month=new Date().toISOString().slice(0,7);
+let tab='dash', showAllCats=false, alertsOpen=false, txSearch='';
+let txFilter={cat:'',member:'',type:''};
+
+/* ---------- התקנה כאפליקציה ---------- */
+const STANDALONE=(matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)
+  ||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+let deferredInstall=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;
+  if(tab==='settings'&&HH)render()});
+addEventListener('appinstalled',()=>{deferredInstall=null;toast('האפליקציה הותקנה ✓')});
+
+/* ---------- רשת ו-Service Worker ---------- */
 const setNet=()=>document.body.classList.toggle('offline',navigator.onLine===false);
-addEventListener('online',()=>{setNet();if(S.sync.on)syncNow(true)});
+addEventListener('online',()=>{setNet();if(HH)flush()});
 addEventListener('offline',setNet);
 setNet();
 if('serviceWorker' in navigator&&(location.protocol==='https:'
    ||location.hostname==='localhost'||location.hostname==='127.0.0.1'))
   addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
-document.getElementById('mPrev').onclick=()=>{month=shiftMonth(month,-1);render()};
-document.getElementById('mNext').onclick=()=>{month=shiftMonth(month,1);render()};
-document.getElementById('syncBtn').onclick=()=>syncNow(false);
+/* ---------- ערכת נושא ---------- */
+const THEME_KEY='hakis-theme';
+try{const t=localStorage.getItem(THEME_KEY);
+  if(t)document.documentElement.setAttribute('data-theme',t);
+  else if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark')}catch(e){}
 document.getElementById('themeBtn').onclick=()=>{
   const d=document.documentElement.getAttribute('data-theme')==='dark';
   document.documentElement.setAttribute('data-theme',d?'light':'dark');
-  try{localStorage.setItem(KEY+'-theme',d?'light':'dark')}catch(e){}};
-try{const t=localStorage.getItem(KEY+'-theme');
-  if(t)document.documentElement.setAttribute('data-theme',t);
-  else if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark')}catch(e){}
+  try{localStorage.setItem(THEME_KEY,d?'light':'dark')}catch(e){}};
+
+/* ---------- כפתורי מסגרת ---------- */
+document.getElementById('mPrev').onclick=()=>{month=shiftMonth(month,-1);render()};
+document.getElementById('mNext').onclick=()=>{month=shiftMonth(month,1);render()};
+document.getElementById('syncBtn').onclick=async()=>{
+  const pend=DIRTY.size+GONE.length;
+  if(pend){await flush();toast(lastError?'השמירה נכשלה — '+lastError:'נשמר ✓');return}
+  await reload();toast('רועננו מהשרת ✓');
+};
 document.addEventListener('click',e=>{const b=e.target.closest('#tabs button,#mobnav button');if(b)go(b.dataset.tab)});
-render();
-if(!S.sync.on&&LINK.url&&LINK.code&&!S.onboarded&&!S.tx.length){
-  /* נפתח מקישור הזמנה במכשיר חדש — מצטרפים לגיליון בלי לשאול */
-  S.sync={url:LINK.url,code:LINK.code,on:true,last:0};
-  syncNow(true,true).then(ok=>{
-    if(!ok){S.sync={url:'',code:'',on:false,last:0};save(false);render();startWizard();return}
-    save(false);startPolling();render();
-    if(S.onboarded)toast('המכשיר חובר לגיליון המשפחתי ✓');else startWizard();
-  });
-}else{
-  if(!S.onboarded)startWizard();
-  if(S.sync.on){syncNow(true);startPolling()}
+
+/* לא עוזבים דף עם שינוי שעוד לא נשמר */
+addEventListener('beforeunload',e=>{
+  if(DIRTY.size||GONE.length){flush();e.preventDefault();e.returnValue=''}
+});
+/* חזרה ללשונית — מושכים את מה שבן/בת הזוג הספיקו לרשום */
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&HH&&!DIRTY.size&&!GONE.length)reload()});
+
+async function reload(){
+  if(!HH)return;
+  try{await loadAll();render()}catch(e){lastError=e.message;setSyncUI('err')}
 }
+
+/* ---------- הזמנה מהקישור ----------
+   שומרים אותה בצד, כי מסלול אישור המייל מחזיר את המשתמש לדף
+   עם סולמית משלו ומוחק את שלנו. */
+const INV_KEY='hakis-pending-invite';
+function readInvite(){
+  const m=(location.hash||'').match(/join=([0-9a-fA-F-]{36})/);
+  if(m){try{localStorage.setItem(INV_KEY,m[1])}catch(e){}return m[1]}
+  try{return localStorage.getItem(INV_KEY)||null}catch(e){return null}
+}
+function clearInvite(){try{localStorage.removeItem(INV_KEY)}catch(e){}}
+
+/* ---------- ההמראה ---------- */
+async function boot(){
+  const boo=document.getElementById('boot');
+  pendingInvite=readInvite();
+
+  if(!(await initClient())){
+    boo.innerHTML=`<div style="max-width:320px">
+      <p style="font-size:34px;margin:0 0 8px">📡</p>
+      <p><b>לא הצלחנו להתחבר לשרת.</b></p>
+      <p>בדקו את החיבור לאינטרנט ורעננו את הדף.</p></div>`;
+    return;
+  }
+
+  let session=null;
+  try{const {data}=await sb.auth.getSession();session=data&&data.session}catch(e){}
+
+  /* חזרה מקישור אישור מייל או איפוס סיסמה */
+  sb.auth.onAuthStateChange((ev,s)=>{
+    if(ev==='PASSWORD_RECOVERY'){SESSION=s;toast('אפשר לקבוע סיסמה חדשה בהגדרות ← החשבון שלי')}
+  });
+
+  boo.classList.add('off');
+  showCookieBar();
+
+  if(!session){SESSION=null;showAuth();return}
+  SESSION=session;
+  try{
+    await afterAuth(null);
+  }catch(e){
+    lastError=e.message||String(e);
+    toast('טעינת הנתונים נכשלה: '+lastError);
+    showAuth();
+  }
+}
+boot();
+
 </script>
 </body>
 </html>
