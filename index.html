@@ -723,13 +723,31 @@ async function flush(){
 }
 
 /* ==================== טעינה ==================== */
+/* משתמש יכול להימצא ביותר ממשפחה אחת (למשל אם נרשם לבד ורק אחר כך
+   מימש הזמנה). אסור לבחור "הראשונה שיוצאת" — צריך כלל קבוע, אחרת
+   הוא ייפתח פעם על משפחה אחת ופעם על אחרת. */
 async function loadHousehold(){
-  const {data:mem,error:e1}=await sb.from('household_members')
-    .select('household_id,display_name,role,slot,households(id,name,onboarded)').limit(1);
+  const me=SESSION&&SESSION.user&&SESSION.user.id;
+  const {data:mine,error:e1}=await sb.from('household_members')
+    .select('household_id,display_name,role,slot,joined_at,households(id,name,onboarded)')
+    .eq('user_id',me);
   if(e1)throw e1;
-  if(!mem||!mem.length){HH=null;return null}
-  const row=mem[0], h=row.households||{};
-  HH={id:row.household_id,name:h.name||'המשפחה שלי',onboarded:!!h.onboarded,role:row.role};
+  if(!mine||!mine.length){HH=null;return null}
+
+  let pick=mine[0];
+  if(mine.length>1){
+    /* כמה אנשים בכל אחת מהמשפחות שלי (ה-RLS מראה רק אותן) */
+    const {data:all}=await sb.from('household_members').select('household_id');
+    const size={};(all||[]).forEach(r=>size[r.household_id]=(size[r.household_id]||0)+1);
+    const score=r=>[size[r.household_id]||1, (r.households&&r.households.onboarded)?1:0];
+    pick=mine.slice().sort((a,b)=>{
+      const A=score(a),B=score(b);
+      return (B[0]-A[0])||(B[1]-A[1])||String(a.joined_at||'').localeCompare(String(b.joined_at||''));
+    })[0];
+  }
+  const h=pick.households||{};
+  HH={id:pick.household_id,name:h.name||'המשפחה שלי',onboarded:!!h.onboarded,
+      role:pick.role,others:mine.length-1};
   return HH;
 }
 
@@ -820,6 +838,7 @@ const AUTH_MSG={
 const authErr=m=>AUTH_MSG[m]||m||'משהו השתבש';
 
 function showAuth(){
+  if(pendingInvite)authMode='up';        /* מי שהגיע מהזמנה בא כדי להירשם */
   document.getElementById('auth').classList.add('on');
   document.body.style.overflow='hidden';
   drawAuth();
@@ -829,7 +848,10 @@ function hideAuth(){
   document.body.style.overflow='';
 }
 
+/* ההרשמה בהזמנה בלבד: בלי קישור הזמנה אין דרך לפתוח חשבון חדש,
+   ולכן גם אין דרך שמישהו זר ייצור לעצמו משפחה במערכת שלכם. */
 function drawAuth(){
+  if(!pendingInvite&&authMode==='up')authMode='in';
   const inv=pendingInvite?`<p class="sub" style="background:color-mix(in srgb,var(--s1) 10%,transparent);
       border-radius:10px;padding:10px 12px;margin:0 0 14px">
       🎉 הוזמנתם למשפחה. ${authMode==='up'?'צרו חשבון':'התחברו'} וההזמנה תמומש אוטומטית.</p>`:'';
@@ -853,9 +875,11 @@ function drawAuth(){
       <button class="btn" id="aGo" style="width:100%;margin-top:8px">
         ${authMode==='up'?'יצירת חשבון':'כניסה'}</button>
       <div class="authalt">
-        ${authMode==='up'
-          ? 'כבר יש לכם חשבון? <a href="#" id="aSwitch">כניסה</a>'
-          : 'אין לכם חשבון? <a href="#" id="aSwitch">הרשמה</a>'}
+        ${pendingInvite
+          ? (authMode==='up'
+              ? 'כבר יש לכם חשבון? <a href="#" id="aSwitch">כניסה</a>'
+              : 'אין לכם חשבון? <a href="#" id="aSwitch">הרשמה</a>')
+          : 'ההרשמה כאן היא בהזמנה בלבד — בקשו מבן משפחה קישור הזמנה.'}
         ${authMode==='in'?'<br><a href="#" id="aForgot">שכחתי סיסמה</a>':''}
       </div>
     </div>`;
@@ -863,7 +887,8 @@ function drawAuth(){
   const err=m=>{document.getElementById('aErr').textContent=m||''};
   const go=document.getElementById('aGo');
 
-  document.getElementById('aSwitch').onclick=e=>{e.preventDefault();authMode=authMode==='up'?'in':'up';drawAuth()};
+  const sw=document.getElementById('aSwitch');
+  if(sw)sw.onclick=e=>{e.preventDefault();authMode=authMode==='up'?'in':'up';drawAuth()};
   const fg=document.getElementById('aForgot');
   if(fg)fg.onclick=async e=>{
     e.preventDefault();
@@ -915,21 +940,34 @@ function drawAuth(){
 
 /* אחרי כניסה מוצלחת: מימוש הזמנה אם יש, טעינת המשפחה, ואם אין — הקמה */
 async function afterAuth(nameHint){
+  let inviteFailed=null;
   if(pendingInvite){
     try{
       await redeemInvite(pendingInvite,nameHint||displayNameGuess());
       toast('הצטרפתם למשפחה ✓');
     }catch(e){
-      toast('ההזמנה כבר לא תקפה: '+(e.message||''));
+      inviteFailed=e.message||'ההזמנה אינה תקפה';
     }
     pendingInvite=null;clearInvite();
     history.replaceState(null,'',location.pathname);
   }
   await loadHousehold();
+
+  /* בלי משפחה אין מה להציג. לא פותחים כאן משפחה חדשה "ליתר ביטחון" —
+     ככה נוצרות משפחות ריקות יתומות. */
   if(!HH){
-    hideAuth();
-    await createHousehold('המשפחה שלי',nameHint||displayNameGuess());
-    render();startWizard();
+    document.getElementById('authIn').innerHTML=`
+      <div class="authbox">
+        <div class="authlogo">🔗</div>
+        <h1>ההזמנה כבר לא תקפה</h1>
+        <p class="sub">${esc(inviteFailed||'החשבון הזה עדיין לא משויך לאף משפחה.')}
+          <br><br>קישור הזמנה תקף 14 יום ומתבטל אחרי שימוש אחד.
+          בקשו מבן משפחה לשלוח לכם קישור חדש מההגדרות.</p>
+        <button class="btn" id="aBack" style="width:100%;margin-top:14px">חזרה למסך הכניסה</button>
+      </div>`;
+    document.getElementById('aBack').onclick=()=>signOut();
+    document.getElementById('auth').classList.add('on');
+    document.body.style.overflow='hidden';
     return;
   }
   await loadAll();
