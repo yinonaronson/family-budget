@@ -292,6 +292,181 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 .ck-tag{display:inline-block;background:var(--plane-2);color:var(--text-secondary);
   border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;vertical-align:2px}
 
+/* ==================== דף הבית ==================== */
+/* מכסה את האפליקציה לגמרי, עם גלילה משלו — כמו האשף ומסך הכניסה */
+.land{position:fixed;inset:0;z-index:60;background:var(--plane);
+  overflow-y:auto;overscroll-behavior:contain;display:none}
+.land.on{display:block}
+.land-wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+.land-top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--plane) 86%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--ring)}
+.land-top-in{max-width:1080px;margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:10px}
+.land-top .brand{margin-inline-end:auto}
+.btn.sm{padding:7px 15px;font-size:13.5px}
+.btn.big{padding:14px 28px;font-size:15.5px;font-weight:700}
+
+.land-hero{padding:44px 0 30px}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center}
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr;gap:26px}
+  .land-hero{padding:26px 0 18px}
+  .hero-copy .lead{font-size:15.5px;margin-bottom:18px}
+  .hero-cta .btn{flex:1 1 100%}
+  .hero-note{margin-top:11px}
+}
+.hero-copy h1{font-size:40px;line-height:1.16;font-weight:800;letter-spacing:-.03em;margin:0 0 16px}
+.hero-copy h1 em{font-style:normal;color:var(--s1)}
+@media(max-width:560px){.hero-copy h1{font-size:30px}}
+.hero-copy .lead{font-size:16.5px;line-height:1.65;color:var(--text-secondary);margin:0 0 24px}
+.hero-cta{display:flex;gap:10px;flex-wrap:wrap}
+.hero-note{margin:14px 0 0;max-width:440px}
+.btn[disabled]{opacity:.5;cursor:default}
+
+.anim-frame{position:relative;background:var(--surface-1);border:1px solid var(--ring);
+  border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+.anim-frame svg{display:block;width:100%;height:auto}
+.anim-cap{border-top:1px solid var(--ring);padding:13px 16px;min-height:52px;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  font-size:14.5px;font-weight:600;color:var(--text-secondary);line-height:1.4}
+.anim-bar{display:flex;align-items:center;gap:12px;padding:12px 4px 0;justify-content:center}
+.anim-play{background:var(--surface-1);border:1px solid var(--ring);border-radius:99px;
+  width:32px;height:32px;display:grid;place-items:center;line-height:1;
+  color:var(--text-secondary);box-shadow:var(--shadow)}
+.anim-play:hover{color:var(--s1)}
+.anim-dots{display:flex;gap:7px}
+.anim-dots i{display:block;width:8px;height:8px;border-radius:50%;background:var(--grid);
+  cursor:pointer;transition:background .2s,transform .2s}
+.anim-dots i.on{background:var(--s1);transform:scale(1.3)}
+
+.land-sec{padding:34px 20px}
+.sec-h{font-size:25px;font-weight:800;letter-spacing:-.02em;margin:0 0 20px;text-align:center}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:860px){.cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.cards{grid-template-columns:1fr}}
+.lcard{background:var(--surface-1);border:1px solid var(--ring);border-radius:16px;
+  padding:20px 18px;box-shadow:var(--shadow)}
+.lcard .ic{font-size:24px;line-height:1;display:block;margin-bottom:10px}
+.lcard h3{font-size:16px;font-weight:700;margin:0 0 7px}
+.lcard p{font-size:14px;line-height:1.6;color:var(--text-secondary);margin:0}
+
+.steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:760px){.steps3{grid-template-columns:1fr}}
+.step3{background:var(--surface-1);border:1px solid var(--ring);border-radius:16px;padding:20px 18px}
+.step3 .num{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;
+  background:var(--s1);color:#fff;font-weight:800;font-size:14px;margin-bottom:11px}
+.step3 h3{font-size:15.5px;font-weight:700;margin:0 0 6px}
+.step3 p{font-size:14px;line-height:1.6;color:var(--text-secondary);margin:0}
+
+.privacy{background:var(--surface-1);border:1px solid var(--ring);border-radius:18px;padding:26px 24px}
+.plist{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:11px}
+.plist li{font-size:14.5px;line-height:1.65;color:var(--text-secondary)}
+.plist b{color:var(--text-primary)}
+
+.land-foot{border-top:1px solid var(--ring);margin-top:30px;padding:26px 0 40px;text-align:center}
+.land-foot .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
+
+/* ---------- האנימציה ---------- */
+#explain .sc{opacity:0;visibility:hidden}
+#explain .sc.on{opacity:1;visibility:visible;transition:opacity .45s ease}
+
+/* 1 — המטבעות נופלים מהכיס */
+.sc.on .s0-pocket{animation:s0tilt 1s .1s both ease-out}
+@keyframes s0tilt{0%{transform:rotate(0)}100%{transform:rotate(-9deg)}}
+#explain .s0-pocket{transform-origin:300px 174px}
+.sc.on .s0-coins .c{animation:s0drop 2.4s .5s infinite ease-in}
+.sc.on .s0-coins .c2{animation-delay:.75s}
+.sc.on .s0-coins .c3{animation-delay:1.05s}
+.sc.on .s0-coins .c4{animation-delay:1.4s}
+.sc.on .s0-coins .c5{animation-delay:1.75s}
+@keyframes s0drop{
+  0%{opacity:0;transform:translate(0,0) rotate(0)}
+  12%{opacity:1}
+  100%{opacity:0;transform:translate(-96px,132px) rotate(220deg)}}
+.sc.on .s0-q{animation:s0q 2.2s .9s infinite ease-in-out}
+@keyframes s0q{0%,100%{opacity:.25;transform:scale(.9)}50%{opacity:1;transform:scale(1.12)}}
+#explain .s0-q{transform-origin:300px 262px}
+
+/* 2 — הפסים מתמלאים */
+.sc.on .s1-row{animation:s1in .5s both ease-out}
+.sc.on .s1-row.r2{animation-delay:.16s}
+.sc.on .s1-row.r3{animation-delay:.32s}
+.sc.on .s1-row.r4{animation-delay:.48s}
+@keyframes s1in{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:translateX(0)}}
+/* מילוי מימין לשמאל: scaleX סביב הקצה הימני, לא שינוי width */
+#explain .fill,#explain .s4-fill{transform-box:fill-box;transform-origin:100% 50%;transform:scaleX(0)}
+.sc.on .s1-row .fill{animation:s1grow 1.1s .35s both cubic-bezier(.2,.7,.3,1)}
+.sc.on .s1-row.r2 .fill{animation-delay:.5s}
+.sc.on .s1-row.r3 .fill{animation-delay:.66s}
+.sc.on .s1-row.r4 .fill{animation-delay:.82s}
+@keyframes s1grow{from{transform:scaleX(0)}to{transform:scaleX(var(--k))}}
+
+/* 3 — הקלדה בטלפון */
+.sc.on .k rect{transition:fill .18s}
+#explain .k.hit rect{fill:var(--s1)}
+#explain .k.hit text{fill:#fff}
+#explain .s2-cat .pick.hit{fill:color-mix(in srgb,var(--s1) 22%,var(--surface-1));
+  stroke:var(--s1);stroke-width:2}
+#explain .s2-ok{opacity:.35}
+#explain .s2-ok.hit{opacity:1;animation:s2ok .4s both}
+@keyframes s2ok{0%{transform:scale(1)}45%{transform:scale(.94)}100%{transform:scale(1)}}
+#explain .s2-ok{transform-origin:300px 278px}
+.sc.on .s2-tap.go{animation:s2tap .45s both ease-out}
+@keyframes s2tap{0%{opacity:.5;r:6}100%{opacity:0;r:22}}
+
+/* 4 — סנכרון בין שני מכשירים */
+#explain .s3-dot{opacity:0}
+.sc.on .s3-dot{animation:s3fly 2.6s .4s infinite ease-in-out}
+@keyframes s3fly{
+  0%{opacity:0;transform:translateX(0)}
+  10%{opacity:1}
+  46%{opacity:1;transform:translateX(76px) translateY(-38px)}
+  54%{opacity:1;transform:translateX(76px) translateY(-38px)}
+  90%{opacity:1;transform:translateX(152px) translateY(0)}
+  100%{opacity:0;transform:translateX(152px)}}
+.sc.on .s3-cloud{animation:s3cloud 2.6s .4s infinite ease-in-out}
+@keyframes s3cloud{0%,35%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-5px)}70%,100%{opacity:.3;transform:translateY(0)}}
+#explain .s3-cloud{transform-origin:300px 138px}
+#explain .s3-n2{opacity:.25}
+.sc.on .s3-n2{animation:s3land 2.6s .4s infinite}
+@keyframes s3land{0%,80%{opacity:.25;transform:scale(1)}88%{opacity:1;transform:scale(1.18)}100%{opacity:1;transform:scale(1)}}
+#explain .s3-n2{transform-origin:436px 168px}
+
+/* 5 — התראה לפני החריגה */
+.sc.on .s4-fill{animation:s4grow 2.6s .3s both cubic-bezier(.3,.6,.4,1)}
+@keyframes s4grow{
+  0%{transform:scaleX(0);fill:var(--s1)}
+  70%{fill:var(--s1)}
+  74%{fill:var(--warning)}
+  100%{transform:scaleX(var(--k));fill:var(--warning)}}
+#explain .s4-warn{opacity:0}
+.sc.on .s4-warn{animation:s4warn .5s 2.2s both ease-out}
+@keyframes s4warn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* 6 — קצב מול צפי */
+#explain .s5-act,#explain .s5-exp{stroke-dashoffset:0}
+.sc.on .s5-exp{stroke-dasharray:6 6}
+.sc.on .s5-act{stroke-dasharray:460;stroke-dashoffset:460;animation:s5draw 1.7s .3s both ease-out}
+@keyframes s5draw{to{stroke-dashoffset:0}}
+#explain .s5-chip{opacity:0}
+.sc.on .s5-chip{animation:s4warn .5s 1.9s both ease-out}
+
+/* 7 — סיום */
+.sc.on .s6-logo{animation:s6pop .6s both cubic-bezier(.2,1.3,.4,1)}
+@keyframes s6pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+#explain .s6-logo{transform-origin:300px 154px}
+.sc.on .s6-t1{animation:s6up .5s .28s both ease-out}
+.sc.on .s6-t2{animation:s6up .5s .46s both ease-out}
+@keyframes s6up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+@media(prefers-reduced-motion:reduce){
+  #explain *{animation:none!important;transition:none!important}
+  #explain .fill,#explain .s4-fill{transform:scaleX(var(--k,.85))}
+  #explain .s5-act{stroke-dasharray:none;stroke-dashoffset:0}
+  #explain .s3-dot,#explain .s2-ok,#explain .s3-n2,
+  #explain .s4-warn,#explain .s5-chip{opacity:1}
+}
+
 </style>
 </head>
 <body>
@@ -333,6 +508,265 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 <div class="wiz" id="wiz"><div class="wiz-in" id="wizIn"></div></div>
 <div class="toast"><div id="toast"></div></div>
 <footer class="note" id="footNote"></footer>
+<div class="land" id="land">
+
+  <header class="land-top">
+    <div class="land-top-in">
+      <div class="brand"><span class="logo">&#8362;</span><span>הכיס המשפחתי</span></div>
+      <button class="btn ghost sm" id="landTheme" aria-label="מצב כהה או בהיר">◐</button>
+      <button class="btn sm" id="landLogin">כניסה</button>
+    </div>
+  </header>
+
+  <section class="land-hero">
+    <div class="land-wrap hero-grid">
+      <div class="hero-copy">
+        <h1>לדעת לאן הולך הכסף,<br><em>בזמן שהוא הולך.</em></h1>
+        <p class="lead">תקציב משפחתי שכל בני הבית מנהלים יחד — מאותו מסך, באותו רגע.
+          תקרה לכל קטגוריה, רישום הוצאה בשתי שניות, והתראה <b>לפני</b> החריגה
+          ולא בדף החשבון של סוף החודש.</p>
+        <div class="hero-cta">
+          <button class="btn big" id="heroLogin">כניסה לחשבון</button>
+          <button class="btn ghost big" id="heroSignup" disabled>פתיחת חשבון · בקרוב</button>
+        </div>
+        <p class="sub hero-note">פתוח כרגע למשפחות מוזמנות בלבד. יש לכם קישור הזמנה?
+          פתחו אותו — והחשבון ייווצר בלחיצה.</p>
+      </div>
+
+      <div class="hero-anim">
+        <div class="anim-frame">
+          <svg id="explain" viewBox="0 0 600 360" role="img"
+               aria-label="אנימציה שמסבירה איך המערכת עובדת: הגדרת תקציב, רישום הוצאה, סנכרון בין בני המשפחה, והתראה לפני חריגה">
+            <defs>
+              <clipPath id="phoneClip"><rect x="228" y="52" width="144" height="252" rx="18"/></clipPath>
+            </defs>
+
+            <!-- ===== 1. לאן הלך הכסף ===== -->
+            <g class="sc" data-sc="0">
+              <g class="s0-pocket">
+                <rect x="228" y="126" width="144" height="96" rx="18" fill="var(--plane-2)" stroke="var(--ring)"/>
+                <rect x="228" y="126" width="144" height="26" rx="13" fill="var(--s1)" opacity=".18"/>
+              </g>
+              <g class="s0-coins" fill="var(--s4)" stroke="#b07d00" stroke-width="1.5">
+                <g class="c c1"><circle cx="300" cy="150" r="15"/>
+                  <text x="300" y="156" text-anchor="middle" font-size="15" font-weight="700"
+                        fill="#7a5600" stroke="none">&#8362;</text></g>
+                <g class="c c2"><circle cx="300" cy="150" r="12"/>
+                  <text x="300" y="155" text-anchor="middle" font-size="12" font-weight="700"
+                        fill="#7a5600" stroke="none">&#8362;</text></g>
+                <g class="c c3"><circle cx="300" cy="150" r="13.5"/>
+                  <text x="300" y="155" text-anchor="middle" font-size="13" font-weight="700"
+                        fill="#7a5600" stroke="none">&#8362;</text></g>
+                <g class="c c4"><circle cx="300" cy="150" r="11"/>
+                  <text x="300" y="154" text-anchor="middle" font-size="11" font-weight="700"
+                        fill="#7a5600" stroke="none">&#8362;</text></g>
+                <g class="c c5"><circle cx="300" cy="150" r="14"/>
+                  <text x="300" y="155" text-anchor="middle" font-size="14" font-weight="700"
+                        fill="#7a5600" stroke="none">&#8362;</text></g>
+              </g>
+              <text class="s0-q" x="300" y="278" text-anchor="middle"
+                    font-size="46" font-weight="800" fill="var(--muted)">?</text>
+            </g>
+
+            <!-- ===== 2. מגדירים תקציב ===== -->
+            <g class="sc" data-sc="1">
+              <!-- ה-translate יושב על ה-g החיצוני; ה-CSS מזיז רק את הפנימי,
+                   אחרת transform של CSS היה דורס את ה-attribute ומרסק את הפריסה.
+                   הפסים מתמלאים מימין לשמאל, כמו במסך האמיתי. -->
+              <g transform="translate(96,84)"><g class="s1-row r1">
+                <text x="408" y="2" text-anchor="start" font-size="18">🛒</text>
+                <text x="378" y="0" text-anchor="start" font-size="14" font-weight="600" fill="var(--text-secondary)">סופר ומזון</text>
+                <rect x="0" y="12" width="408" height="12" rx="6" fill="var(--grid)"/>
+                <rect class="fill" x="0" y="12" width="408" height="12" rx="6" fill="var(--s1)" data-k="1"/>
+              </g></g>
+              <g transform="translate(96,150)"><g class="s1-row r2">
+                <text x="408" y="2" text-anchor="start" font-size="18">⛽</text>
+                <text x="378" y="0" text-anchor="start" font-size="14" font-weight="600" fill="var(--text-secondary)">דלק ותחבורה</text>
+                <rect x="0" y="12" width="408" height="12" rx="6" fill="var(--grid)"/>
+                <rect class="fill" x="0" y="12" width="408" height="12" rx="6" fill="var(--s3)" data-k="0.667"/>
+              </g></g>
+              <g transform="translate(96,216)"><g class="s1-row r3">
+                <text x="408" y="2" text-anchor="start" font-size="18">🍽️</text>
+                <text x="378" y="0" text-anchor="start" font-size="14" font-weight="600" fill="var(--text-secondary)">בילויים ומסעדות</text>
+                <rect x="0" y="12" width="408" height="12" rx="6" fill="var(--grid)"/>
+                <rect class="fill" x="0" y="12" width="408" height="12" rx="6" fill="var(--s4)" data-k="0.466"/>
+              </g></g>
+              <g transform="translate(96,282)"><g class="s1-row r4">
+                <text x="408" y="2" text-anchor="start" font-size="18">🐷</text>
+                <text x="378" y="0" text-anchor="start" font-size="14" font-weight="600" fill="var(--text-secondary)">חיסכון</text>
+                <rect x="0" y="12" width="408" height="12" rx="6" fill="var(--grid)"/>
+                <rect class="fill" x="0" y="12" width="408" height="12" rx="6" fill="var(--s6)" data-k="0.784"/>
+              </g></g>
+            </g>
+
+            <!-- ===== 3. רישום בשתי שניות ===== -->
+            <g class="sc" data-sc="2">
+              <rect x="228" y="52" width="144" height="252" rx="18" fill="var(--surface-1)" stroke="var(--ring)" stroke-width="2"/>
+              <g clip-path="url(#phoneClip)">
+                <rect x="228" y="52" width="144" height="46" fill="var(--plane)"/>
+                <text class="s2-amt" x="300" y="86" text-anchor="middle" font-size="26"
+                      font-weight="800" fill="var(--text-primary)">₪0</text>
+                <g class="s2-pad">
+                  <g class="k k1"><rect x="243" y="112" width="34" height="26" rx="8" fill="var(--plane)"/><text x="260" y="130" text-anchor="middle" font-size="13" fill="var(--text-secondary)">1</text></g>
+                  <g class="k k2"><rect x="283" y="112" width="34" height="26" rx="8" fill="var(--plane)"/><text x="300" y="130" text-anchor="middle" font-size="13" fill="var(--text-secondary)">2</text></g>
+                  <g class="k k3"><rect x="323" y="112" width="34" height="26" rx="8" fill="var(--plane)"/><text x="340" y="130" text-anchor="middle" font-size="13" fill="var(--text-secondary)">3</text></g>
+                  <g class="k k4"><rect x="243" y="146" width="34" height="26" rx="8" fill="var(--plane)"/><text x="260" y="164" text-anchor="middle" font-size="13" fill="var(--text-secondary)">4</text></g>
+                  <g class="k k5"><rect x="283" y="146" width="34" height="26" rx="8" fill="var(--plane)"/><text x="300" y="164" text-anchor="middle" font-size="13" fill="var(--text-secondary)">5</text></g>
+                  <g class="k k6"><rect x="323" y="146" width="34" height="26" rx="8" fill="var(--plane)"/><text x="340" y="164" text-anchor="middle" font-size="13" fill="var(--text-secondary)">6</text></g>
+                  <g class="k k7"><rect x="243" y="180" width="34" height="26" rx="8" fill="var(--plane)"/><text x="260" y="198" text-anchor="middle" font-size="13" fill="var(--text-secondary)">7</text></g>
+                  <g class="k k8"><rect x="283" y="180" width="34" height="26" rx="8" fill="var(--plane)"/><text x="300" y="198" text-anchor="middle" font-size="13" fill="var(--text-secondary)">8</text></g>
+                  <g class="k k9"><rect x="323" y="180" width="34" height="26" rx="8" fill="var(--plane)"/><text x="340" y="198" text-anchor="middle" font-size="13" fill="var(--text-secondary)">0</text></g>
+                </g>
+                <g class="s2-cat">
+                  <rect x="243" y="218" width="46" height="34" rx="10" fill="var(--plane)"/>
+                  <text x="266" y="240" text-anchor="middle" font-size="15">⛽</text>
+                  <rect class="pick" x="294" y="218" width="46" height="34" rx="10" fill="var(--plane)"/>
+                  <text x="317" y="240" text-anchor="middle" font-size="15">🛒</text>
+                </g>
+                <g class="s2-ok">
+                  <rect x="243" y="264" width="114" height="28" rx="10" fill="var(--s1)"/>
+                  <text x="300" y="283" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">שמירה ✓</text>
+                </g>
+              </g>
+              <circle class="s2-tap" r="11" fill="var(--s1)" opacity="0"/>
+            </g>
+
+            <!-- ===== 4. כולם רואים אותו דבר ===== -->
+            <g class="sc" data-sc="3">
+              <g>
+                <rect x="104" y="96" width="120" height="176" rx="16" fill="var(--surface-1)" stroke="var(--ring)" stroke-width="2"/>
+                <text x="164" y="132" text-anchor="middle" font-size="12" fill="var(--muted)">ינון</text>
+                <text class="s3-n1" x="164" y="176" text-anchor="middle" font-size="24" font-weight="800" fill="var(--text-primary)">₪250</text>
+                <rect x="126" y="204" width="76" height="8" rx="4" fill="var(--grid)"/>
+                <rect x="126" y="224" width="54" height="8" rx="4" fill="var(--grid)"/>
+              </g>
+              <g>
+                <rect x="376" y="96" width="120" height="176" rx="16" fill="var(--surface-1)" stroke="var(--ring)" stroke-width="2"/>
+                <text x="436" y="132" text-anchor="middle" font-size="12" fill="var(--muted)">מיטל</text>
+                <text class="s3-n2" x="436" y="176" text-anchor="middle" font-size="24" font-weight="800" fill="var(--text-primary)">₪250</text>
+                <rect x="398" y="204" width="76" height="8" rx="4" fill="var(--grid)"/>
+                <rect x="398" y="224" width="54" height="8" rx="4" fill="var(--grid)"/>
+              </g>
+              <path class="s3-wire" d="M224 184 H376" stroke="var(--ring)" stroke-width="2" fill="none"/>
+              <circle class="s3-dot" cx="224" cy="184" r="7" fill="var(--s3)"/>
+              <text class="s3-cloud" x="300" y="146" text-anchor="middle" font-size="22">☁️</text>
+            </g>
+
+            <!-- ===== 5. התראה לפני החריגה ===== -->
+            <g class="sc" data-sc="4">
+              <text x="300" y="118" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text-secondary)">🛒 סופר ומזון</text>
+              <rect x="120" y="146" width="360" height="20" rx="10" fill="var(--grid)"/>
+              <rect class="s4-fill" x="120" y="146" width="360" height="20" rx="10" fill="var(--s1)" data-k="0.85"/>
+              <g class="s4-warn">
+                <rect x="186" y="206" width="228" height="42" rx="12" fill="var(--surface-1)" stroke="var(--warning)" stroke-width="2"/>
+                <text x="300" y="232" text-anchor="middle" font-size="14" font-weight="700" fill="var(--text-primary)">⚠️ נותרו ₪400 עד התקרה</text>
+              </g>
+            </g>
+
+            <!-- ===== 6. בקצב הנכון ===== -->
+            <g class="sc" data-sc="5">
+              <g font-size="12.5" font-weight="600" fill="var(--muted)">
+                <line x1="424" y1="96" x2="452" y2="96" stroke="var(--axis)" stroke-width="2" stroke-dasharray="5 5"/>
+                <text x="416" y="100" text-anchor="start">הקצב הצפוי</text>
+                <line x1="264" y1="96" x2="292" y2="96" stroke="var(--s2)" stroke-width="3"/>
+                <text x="256" y="100" text-anchor="start">ההוצאה בפועל</text>
+              </g>
+              <text x="300" y="276" text-anchor="middle" font-size="12.5" fill="var(--muted)">מתחילת החודש ועד היום</text>
+              <line x1="110" y1="256" x2="490" y2="256" stroke="var(--axis)" stroke-width="2"/>
+              <path class="s5-exp" d="M110 256 L490 132" stroke="var(--axis)" stroke-width="2"
+                    stroke-dasharray="6 6" fill="none"/>
+              <path class="s5-act" d="M110 256 L186 232 L262 196 L338 178 L414 150 L490 108"
+                    stroke="var(--s2)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <g class="s5-chip">
+                <rect x="196" y="296" width="208" height="38" rx="12" fill="var(--surface-1)" stroke="var(--s2)" stroke-width="2"/>
+                <text x="300" y="320" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--text-primary)">12% מעל הקצב — עוד יש זמן</text>
+              </g>
+            </g>
+
+            <!-- ===== 7. סיום ===== -->
+            <g class="sc" data-sc="6">
+              <g class="s6-logo">
+                <rect x="264" y="118" width="72" height="72" rx="22" fill="var(--s1)"/>
+                <text x="300" y="168" text-anchor="middle" font-size="38" font-weight="700" fill="#fff">&#8362;</text>
+              </g>
+              <text class="s6-t1" x="300" y="234" text-anchor="middle" font-size="26" font-weight="800" fill="var(--text-primary)">הכיס המשפחתי</text>
+              <text class="s6-t2" x="300" y="266" text-anchor="middle" font-size="15" fill="var(--text-secondary)">כל הבית, אותו תקציב, אותו מסך</text>
+            </g>
+          </svg>
+
+          <div class="anim-cap"><span id="animCap">בסוף החודש שואלים: לאן הלך הכסף?</span></div>
+        </div>
+
+        <div class="anim-bar">
+          <button class="anim-play" id="animPlay" aria-label="השהיית האנימציה"></button>
+          <div class="anim-dots" id="animDots"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="land-wrap land-sec">
+    <h2 class="sec-h">מה זה נותן לכם</h2>
+    <div class="cards">
+      <div class="lcard"><span class="ic">🎯</span><h3>תקרה לכל קטגוריה</h3>
+        <p>לא "תקציב" מופשט אלא מספר לכל דבר — סופר, דלק, חוגים.
+           כולל קטגוריות שיורדות פעם בחודשיים או פעם בשנה, שנמדדות נכון.</p></div>
+      <div class="lcard"><span class="ic">⚡</span><h3>רישום בשתי שניות</h3>
+        <p>מקלדת מספרים, קטגוריה, שמירה. בלי טפסים ובלי להיזכר בערב
+           מה קרה בבוקר.</p></div>
+      <div class="lcard"><span class="ic">👨‍👩‍👧</span><h3>כל הבית באותו מסך</h3>
+        <p>מה שאחד רושם, השני רואה מיד. כל תנועה משויכת לאדם, כך שרואים
+           מי הוציא מה — בלי חקירות.</p></div>
+      <div class="lcard"><span class="ic">⚠️</span><h3>התראה לפני, לא אחרי</h3>
+        <p>המערכת אומרת "נותרו ₪400" כשהיא עוד יכולה לשנות משהו,
+           לא "חרגתם ב-₪700" כשכבר מאוחר.</p></div>
+      <div class="lcard"><span class="ic">📈</span><h3>קצב, לא רק סכום</h3>
+        <p>באמצע החודש רואים אם ההוצאה בקצב שיחזיק עד הסוף.
+           הוצאות קבועות לא מעוותות את החישוב.</p></div>
+      <div class="lcard"><span class="ic">🔁</span><h3>הוצאות קבועות בלחיצה</h3>
+        <p>משכנתא, ארנונה, חשמל, ביטוחים — נטענות לחודש החדש בלחיצה אחת
+           במקום להקליד אותן שוב ושוב.</p></div>
+    </div>
+  </section>
+
+  <section class="land-wrap land-sec">
+    <h2 class="sec-h">איך מתחילים</h2>
+    <div class="steps3">
+      <div class="step3"><span class="num">1</span><h3>מקבלים קישור הזמנה</h3>
+        <p>בן משפחה שכבר במערכת שולח לכם קישור. הוא תקף 14 יום ומתבטל אחרי שימוש אחד.</p></div>
+      <div class="step3"><span class="num">2</span><h3>מדריך של דקה</h3>
+        <p>שם, הכנסות, הוצאות קבועות, ותקרות לשוטף. אפשר לשנות הכול אחר כך.</p></div>
+      <div class="step3"><span class="num">3</span><h3>רושמים תוך כדי החיים</h3>
+        <p>מוסיפים את האפליקציה למסך הבית, ורושמים הוצאה ברגע שהיא קורית.</p></div>
+    </div>
+  </section>
+
+  <section class="land-wrap land-sec">
+    <div class="privacy">
+      <h2 class="sec-h" style="margin-top:0">על הכסף שלכם — ועל המידע שלכם</h2>
+      <ul class="plist">
+        <li><b>ההפרדה בין משפחות נאכפת בבסיס הנתונים</b>, לא בקוד הדפדפן.
+            משפחה אחת לא יכולה לראות את הכסף של משפחה אחרת, גם לא בטעות.</li>
+        <li><b>אין פרסום, אין מדידה, אין מעקב.</b> אנחנו לא מוכרים מידע ולא משתפים
+            אותו עם צד שלישי למטרות שיווק.</li>
+        <li><b>במכשיר שלכם נשמר רק ההכרחי</b> — שתישארו מחוברים ושנזכור אם בחרתם
+            מצב כהה. הנתונים הפיננסיים יושבים בבסיס הנתונים, לא בדפדפן.</li>
+        <li><b>הנתונים שלכם שלכם.</b> ייצוא ל-Excel או ל-JSON בכל רגע, בלחיצה.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="land-foot">
+    <div class="land-wrap">
+      <div class="brand" style="justify-content:center;margin-bottom:10px">
+        <span class="logo">&#8362;</span><span>הכיס המשפחתי</span></div>
+      <p class="sub">thefamilypocket.com · נבנה עבור משפחות שרוצות לדעת איפה הן עומדות</p>
+      <div class="toolbar" style="justify-content:center;margin-top:12px">
+        <button class="btn ghost sm" id="footLogin">כניסה לחשבון</button>
+      </div>
+    </div>
+  </footer>
+</div>
 
 <div class="auth" id="auth"><div id="authIn"></div></div>
 <div class="authboot" id="boot"><div>
@@ -986,7 +1420,8 @@ function displayNameGuess(){
 async function signOut(){
   try{await sb.auth.signOut()}catch(e){}
   SESSION=null;HH=null;S=emptyState();DIRTY.clear();GONE.length=0;
-  render();showAuth();
+  render();
+  if(STANDALONE)showAuth();else showLanding();
 }
 
 /* ==================== ניווט ==================== */
@@ -1743,6 +2178,132 @@ function wireCookieCard(){
   };
 }
 
+/* ==================== דף הבית והאנימציה ====================
+   האנימציה היא SVG+CSS ולא קובץ וידאו: חדה בכל מסך, נטענת מיד,
+   עובדת בלי אינטרנט, ומתעדכנת כשהמערכת משתנה. */
+
+const SCENES=[
+  {cap:'בסוף החודש שואלים: לאן הלך הכסף?',            ms:4200},
+  {cap:'מגדירים תקרה לכל קטגוריה — פעם אחת.',          ms:4600},
+  {cap:'רישום הוצאה: שתי שניות, מהטלפון.',             ms:5200},
+  {cap:'מה שאחד רושם — כל הבית רואה מיד.',             ms:5000},
+  {cap:'מתריעים לפני החריגה, לא אחריה.',               ms:4600},
+  {cap:'ובאמצע החודש: אתם בקצב, או לא?',               ms:4400},
+  {cap:'הכיס המשפחתי — כל הבית, אותו תקציב.',          ms:3600},
+];
+
+let scIdx=0, scTimer=null, scPlaying=true, s2Timers=[];
+
+function landingOn(){return document.getElementById('land').classList.contains('on')}
+
+function showLanding(){
+  hideAuth();
+  document.getElementById('land').classList.add('on');
+  document.body.style.overflow='hidden';
+  buildDots();
+  setPlayIcon();
+  playScene(0);
+}
+function hideLanding(){
+  document.getElementById('land').classList.remove('on');
+  document.body.style.overflow='';
+  stopScenes();
+}
+
+function buildDots(){
+  const d=document.getElementById('animDots');
+  if(d.childElementCount)return;
+  d.innerHTML=SCENES.map((s,i)=>`<i data-i="${i}" title="${esc(s.cap)}"></i>`).join('');
+  d.querySelectorAll('i').forEach(el=>el.onclick=()=>{scPlaying=true;setPlayIcon();playScene(+el.dataset.i)});
+}
+/* אייקון מצויר ולא תו יוניקוד — ⏸ ו-▶ לא קיימים בכל הפונטים */
+const IC_PAUSE='<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true">'
+  +'<rect x="0" y="0" width="3.6" height="12" rx="1.2" fill="currentColor"/>'
+  +'<rect x="7.4" y="0" width="3.6" height="12" rx="1.2" fill="currentColor"/></svg>';
+const IC_PLAY='<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true">'
+  +'<path d="M1 1.2 L10 6 L1 10.8 Z" fill="currentColor" stroke="currentColor"'
+  +' stroke-width="1.6" stroke-linejoin="round"/></svg>';
+function setPlayIcon(){
+  const b=document.getElementById('animPlay');
+  if(!b)return;
+  b.innerHTML=scPlaying?IC_PAUSE:IC_PLAY;
+  b.setAttribute('aria-label',scPlaying?'השהיית האנימציה':'המשך האנימציה');
+}
+function stopScenes(){clearTimeout(scTimer);s2Timers.forEach(clearTimeout);s2Timers=[]}
+
+function playScene(i){
+  stopScenes();
+  scIdx=((i%SCENES.length)+SCENES.length)%SCENES.length;
+  const svg=document.getElementById('explain');
+  if(!svg)return;
+
+  svg.querySelectorAll('.sc').forEach(g=>g.classList.remove('on'));
+  svg.querySelectorAll('.k,.pick,.s2-ok,.s2-tap').forEach(e=>e.classList.remove('hit','go'));
+
+  const g=svg.querySelector(`.sc[data-sc="${scIdx}"]`);
+  if(g){
+    /* יחס המילוי של כל פס נקבע ב-data-k, וה-keyframes גדלים עד אליו */
+    g.querySelectorAll('[data-k]').forEach(r=>r.style.setProperty('--k',r.dataset.k));
+    void g.getBoundingClientRect();          /* מאלץ הפעלה מחדש של האנימציות */
+    g.classList.add('on');
+  }
+  document.getElementById('animCap').textContent=SCENES[scIdx].cap;
+  document.querySelectorAll('#animDots i').forEach((el,n)=>el.classList.toggle('on',n===scIdx));
+
+  if(scIdx===2)runKeypad();
+  if(scPlaying)scTimer=setTimeout(()=>playScene(scIdx+1),SCENES[scIdx].ms);
+}
+
+/* סצנה 3 — הקלדת 250, בחירת קטגוריה, שמירה */
+function runKeypad(){
+  const svg=document.getElementById('explain');
+  const amt=svg.querySelector('.s2-amt'), tap=svg.querySelector('.s2-tap');
+  /* sticky=true — בחירת הקטגוריה נשארת מסומנת, מקש נדלק ונכבה */
+  const at=(sel,x,y,ms,txt,sticky)=>s2Timers.push(setTimeout(()=>{
+    const el=svg.querySelector(sel);
+    if(el){el.classList.add('hit');
+      if(!sticky)s2Timers.push(setTimeout(()=>el.classList.remove('hit'),260))}
+    if(tap){tap.setAttribute('cx',x);tap.setAttribute('cy',y);
+      tap.classList.remove('go');void tap.getBoundingClientRect();tap.classList.add('go')}
+    if(txt!==undefined&&amt)amt.textContent=txt;
+  },ms));
+  if(amt)amt.textContent='₪0';
+  at('.k2',300,125, 600,'₪2');
+  at('.k5',300,159,1150,'₪25');
+  at('.k9',340,193,1700,'₪250');
+  at('.s2-cat .pick',317,235,2400,undefined,true);
+  s2Timers.push(setTimeout(()=>{
+    const ok=svg.querySelector('.s2-ok');
+    if(ok)ok.classList.add('hit');
+    if(tap){tap.setAttribute('cx',300);tap.setAttribute('cy',278);
+      tap.classList.remove('go');void tap.getBoundingClientRect();tap.classList.add('go')}
+  },3150));
+}
+
+function wireLanding(){
+  const go=()=>{hideLanding();showAuth()};
+  ['landLogin','heroLogin','footLogin'].forEach(id=>{
+    const b=document.getElementById(id);if(b)b.onclick=go;
+  });
+  const su=document.getElementById('heroSignup');
+  if(su)su.onclick=()=>toast('ההרשמה פתוחה כרגע בהזמנה בלבד');
+
+  const th=document.getElementById('landTheme');
+  if(th)th.onclick=()=>document.getElementById('themeBtn').click();
+
+  const p=document.getElementById('animPlay');
+  if(p)p.onclick=()=>{
+    scPlaying=!scPlaying;setPlayIcon();
+    if(scPlaying)scTimer=setTimeout(()=>playScene(scIdx+1),1200);else stopScenes();
+  };
+  /* לא מבזבזים סוללה על אנימציה שאף אחד לא רואה */
+  document.addEventListener('visibilitychange',()=>{
+    if(!landingOn())return;
+    if(document.hidden)stopScenes();
+    else if(scPlaying)playScene(scIdx);
+  });
+}
+
 /* ==================== אשף ====================
    במערכת עם משתמשים, "בני משפחה" הם חשבונות — מצטרפים דרך קישור הזמנה.
    האשף שואל רק על מה שהוא באמת יכול לקבוע: השם שלכם, ההכנסות,
@@ -1960,8 +2521,15 @@ async function boot(){
 
   boo.classList.add('off');
   showCookieBar();
+  wireLanding();
 
-  if(!session){SESSION=null;showAuth();return}
+  if(!session){
+    SESSION=null;
+    /* דף הבית רק לאורח שהגיע מהדפדפן. מי שהגיע מהזמנה בא להירשם,
+       ומי שפתח את האפליקציה המותקנת רוצה את המסך שלה — לא שיווק. */
+    if(pendingInvite||STANDALONE)showAuth();else showLanding();
+    return;
+  }
   SESSION=session;
   try{
     await afterAuth(null);
