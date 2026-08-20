@@ -501,6 +501,57 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
   #explain .s4-warn,#explain .s5-chip{opacity:1}
 }
 
+/* ===== בורר אימוג'י =====
+   z-index גבוה מהגיליון (61) ונמוך מהטוסט (80), כי הבורר נפתח
+   גם מתוך מסך רישום ההוצאה. */
+#emopop{display:none}
+#emopop.on{display:block;position:fixed;inset:0;z-index:66}
+/* קל יותר מהרגיל: כשהבורר נפתח מתוך מסך הרישום כבר יש כהות אחת מתחתיו,
+   ושתי שכבות זו על זו הופכות את המסך לשחור כמעט. */
+.emoscrim{position:absolute;inset:0;background:rgba(0,0,0,.3)}
+.emopanel{position:fixed;z-index:2;background:var(--surface-1);border:1px solid var(--ring);
+  box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden}
+@media(min-width:720px){
+  .emopanel{top:50%;left:50%;transform:translate(-50%,-50%);width:min(430px,92vw);
+    max-height:min(560px,86vh);border-radius:18px}
+}
+@media(max-width:719px){
+  .emopanel{inset-inline:0;bottom:0;max-height:78vh;border-radius:20px 20px 0 0;border-bottom:0}
+}
+.emohead{display:flex;gap:9px;align-items:center;padding:13px 14px;border-bottom:1px solid var(--grid)}
+.emohead input{flex:1;font-size:14.5px}
+.emox{background:var(--plane);border:0;border-radius:10px;width:34px;height:34px;flex:none;
+  font-size:15px;color:var(--text-secondary)}
+.emobody{overflow-y:auto;padding:6px 12px calc(14px + env(safe-area-inset-bottom));flex:1}
+.emogrp{margin-top:12px}
+/* sticky כדי שתמיד יידעו באיזו קבוצה נמצאים, אבל pointer-events:none —
+   אחרת הכותרת חוסמת לחיצה על השורה הראשונה של הרשת מתחתיה. */
+.emotitle{font-size:11.5px;font-weight:700;color:var(--text-secondary);margin:0 0 7px;
+  position:sticky;top:0;background:var(--surface-1);padding:5px 0;z-index:1;pointer-events:none}
+.emogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:5px}
+.emogrid button{background:none;border:1px solid transparent;border-radius:11px;
+  font-size:23px;line-height:1;padding:8px 0;aspect-ratio:1;display:grid;place-items:center;
+  scroll-margin:38px 0}
+.emogrid button:hover{background:var(--plane)}
+.emogrid button[aria-pressed="true"]{background:color-mix(in srgb,var(--s1) 15%,var(--surface-1));
+  border-color:var(--s1)}
+.emoempty{text-align:center;color:var(--muted);font-size:13.5px;padding:34px 16px;line-height:1.7}
+
+/* הכפתור שפותח את הבורר */
+.emobtn{background:var(--plane);border:1px solid var(--ring);border-radius:11px;
+  padding:0 10px;min-height:42px;display:inline-flex;align-items:center;gap:5px;flex:none;line-height:1}
+.emobtn:hover{background:var(--plane-2)}
+.emobtn .emoglyph{font-size:20px;line-height:1.15}
+.emobtn .emocar{font-size:9px;color:var(--muted)}
+
+/* ===== יצירת קטגוריה תוך כדי רישום ===== */
+.catgrid button.catnew{border-style:dashed;color:var(--s1)}
+.newcat{background:var(--plane);border:1px solid var(--ring);border-radius:13px;
+  padding:12px;margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.newcat input{flex:1;min-width:120px;font-size:14px;padding:9px 10px}
+.newcat input.ncbud{flex:0 0 96px;min-width:0}
+.newcat .btn{padding:9px 15px;font-size:13.5px}
+
 </style>
 </head>
 <body>
@@ -1469,6 +1520,192 @@ async function signOut(){
   if(STANDALONE)showAuth();else showLanding();
 }
 
+/* ==================== בורר אימוג'י ====================
+   שדה טקסט שמצפה שתקליד אימוג'י עובד רק למי שיודע איפה מקש האימוג'י
+   במקלדת שלו — כלומר כמעט לאף אחד בדסקטופ. כאן במקום זה בוחרים בלחיצה.
+
+   הרשימה מקוצרת בכוונה ולא כוללת את כל היוניקוד: אלה האימוג'ים שבאמת
+   מתאימים לקטגוריית תקציב, מקור הכנסה או יעד חיסכון. חיפוש בעברית,
+   כי המשתמשים כותבים "אוכל" ולא "food". */
+
+const EMOJI_GROUPS=[
+ ['אוכל ושתייה','🍽️',[
+  ['🛒','סופר קניות מכולת שופרסל'],['🍎','פרי פירות תפוח'],['🥦','ירקות בריא'],
+  ['🍞','לחם מאפייה'],['🥩','בשר קצבייה'],['🐟','דגים'],['🧀','גבינה חלב מוצרי'],
+  ['🥚','ביצים'],['🍕','פיצה'],['🍔','המבורגר מזון מהיר'],['🌮','אוכל בחוץ'],
+  ['🍣','סושי'],['🥗','סלט'],['☕','קפה בית קפה'],['🍺','בירה אלכוהול'],
+  ['🍷','יין'],['🥤','שתייה משקה'],['🍰','עוגה קינוח מתוק'],['🍫','שוקולד ממתקים'],
+  ['🍦','גלידה'],['🧁','מאפה'],['🍯','דבש'],['🥡','טייק אוואי משלוח'],
+ ]],
+ ['בית וחשבונות','🏠',[
+  ['🏠','בית דירה'],['🏡','בית גינה'],['🔑','שכירות משכנתא מפתח'],
+  ['🏦','משכנתא בנק הלוואה'],['💡','חשמל אור'],['💧','מים'],['🔥','גז חימום'],
+  ['🌡️','הסקה מיזוג'],['📡','אינטרנט כבלים'],['📱','סלולר טלפון'],
+  ['📞','טלפון קווי'],['📺','טלוויזיה נטפליקס מנוי'],['🏛️','ארנונה עירייה מיסים'],
+  ['🧹','ניקיון עוזרת'],['🧼','חומרי ניקוי'],['🧺','כביסה'],['🛋️','ריהוט'],
+  ['🛠️','תיקונים אחזקה'],['🔨','שיפוץ'],['🪴','גינה צמחים'],['🏢','ועד בית'],
+  ['📦','אחסון'],['🛡️','ביטוח'],
+ ]],
+ ['תחבורה','🚗',[
+  ['🚗','רכב אוטו מכונית'],['⛽','דלק תדלוק'],['🅿️','חניה'],
+  ['🔧','מוסך טיפול רכב'],['🚌','אוטובוס תחבורה ציבורית'],['🚆','רכבת'],
+  ['🚕','מונית'],['🛴','קורקינט'],['🚲','אופניים'],['🛵','אופנוע קטנוע'],
+  ['🛣️','כביש אגרה כביש6'],['🚙','ליסינג'],['✈️','טיסה'],
+ ]],
+ ['ילדים וחינוך','🎒',[
+  ['👶','תינוק'],['🍼','תינוק מזון'],['🧸','צעצועים'],['🎒','ילדים בית ספר'],
+  ['🏫','בית ספר חינוך'],['🎨','חוגים אומנות'],['⚽','חוג ספורט כדורגל'],
+  ['🎹','חוג מוזיקה פסנתר'],['📚','ספרים לימודים'],['✏️','ציוד לימודי'],
+  ['🎓','אוניברסיטה שכר לימוד'],['👩‍🏫','מורה שיעורים פרטיים'],
+  ['🧩','גן ילדים מעון'],['🎂','יום הולדת'],
+ ]],
+ ['בריאות','💊',[
+  ['💊','תרופות'],['🏥','בית חולים רפואה'],['🩺','רופא קופת חולים'],
+  ['🦷','שיניים רופא שיניים'],['👓','משקפיים אופטיקה'],['🧴','טיפוח'],
+  ['💆','טיפולים עיסוי'],['🧘','יוגה'],['🏋️','חדר כושר ספורט'],
+  ['🏃','ריצה ספורט'],['🩹','ביטוח בריאות'],['🐕','וטרינר חיות'],
+ ]],
+ ['פנאי ובילוי','🎬',[
+  ['🎬','קולנוע סרט'],['🎭','תיאטרון הצגה'],['🎤','הופעה מופע'],
+  ['🎵','מוזיקה מנוי ספוטיפיי'],['🎮','גיימינג משחקים'],['📱','אפליקציות מנויים'],
+  ['🍿','בילוי'],['🎳','באולינג'],['🎪','אטרקציות'],['🏖️','ים חוף'],
+  ['🎣','דיג תחביב'],['📷','צילום'],['🎲','משחקים'],['🥳','מסיבה אירוע'],
+  ['🎁','מתנות'],['💐','פרחים'],
+ ]],
+ ['קניות וביגוד','🛍️',[
+  ['🛍️','קניות שופינג'],['👕','ביגוד בגדים'],['👟','נעליים'],
+  ['👗','שמלה בגדי נשים'],['🧥','מעיל חורף'],['👜','תיק אביזרים'],
+  ['💄','איפור קוסמטיקה'],['💇','מספרה תספורת'],['💅','מניקור'],
+  ['💍','תכשיטים'],['⌚','שעון'],['💻','מחשב אלקטרוניקה'],
+  ['📱','טלפון מכשיר'],['🖨️','ציוד משרדי'],['🎧','אוזניות גאדג׳טים'],
+ ]],
+ ['כסף והכנסות','💰',[
+  ['💰','כסף הכנסה'],['💵','משכורת שכר'],['💸','הוצאה תשלום'],
+  ['🏦','בנק'],['💳','אשראי כרטיס'],['📈','השקעות מניות בורסה'],
+  ['📊','תשואה'],['🏆','בונוס מענק'],['🧾','חשבונית קבלה'],
+  ['🪙','מזומן חסכון'],['🤝','עסק עצמאי'],['💼','עבודה'],
+  ['🏘️','שכר דירה הכנסה'],['🎯','החזר מס'],['🫙','קופת חיסכון'],
+  ['👵','פנסיה קצבה'],['🇮🇱','ביטוח לאומי קצבאות'],['🎗️','תרומה צדקה מעשר'],
+ ]],
+ ['חופשה ויעדים','✈️',[
+  ['✈️','טיסה חופשה חול'],['🏝️','חופשה אי טרופי'],['🏨','מלון לינה'],
+  ['🧳','מזוודה טיול'],['🗺️','טיול מסלול'],['⛺','קמפינג'],
+  ['🏕️','טבע צימר'],['🎿','סקי'],['🚢','שייט קרוז'],['🗼','חופשה בעיר'],
+  ['🕌','חופשה'],['🎡','לונה פארק'],['💒','חתונה'],['👰','אירוע'],
+  ['🕎','בר מצווה חג'],['🏆','יעד מטרה'],['🎯','יעד'],['🏗️','שיפוץ פרויקט'],
+ ]],
+ ['שונות','✨',[
+  ['📌','כללי אחר'],['⭐','חשוב'],['✨','כללי'],['❤️','אהבה'],
+  ['🐾','חיות מחמד'],['🐕','כלב'],['🐈','חתול'],['🌍','כללי עולם'],
+  ['⚖️','משפטי עורך דין'],['🧮','רואה חשבון'],['📅','שנתי'],
+  ['🚨','חירום בלתי צפוי'],['🔒','אישי'],['👨‍👩‍👧','משפחה'],
+ ]],
+];
+
+let emoTarget=null;
+
+/* בשלב ה-capture על החלון, כדי ש-Escape ייעצר כאן ולא יגיע למאזין
+   של מסך הרישום שיושב מתחת ויסגור גם אותו. לא תלוי בשאלה מה בפוקוס. */
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&emojiOpen()){e.stopPropagation();closeEmojiPicker()}
+},true);
+
+function emojiOpen(){
+  const p=document.getElementById('emopop');
+  return !!p&&p.classList.contains('on');
+}
+
+/* כפתור שמציג את האימוג'י הנוכחי ופותח את הבורר. הערך נשמר ב-data-emo
+   כדי שקוד קורא ישתמש ב-emojiValue() ולא יסתמך על textContent. */
+function emojiBtn(id,value,label){
+  return `<button type="button" class="emobtn" id="${id}" data-emo="${value||'📌'}"
+    aria-label="${esc(label||'בחירת אייקון')}" title="${esc(label||'בחירת אייקון')}"
+    ><span class="emoglyph">${value||'📌'}</span><span class="emocar">▾</span></button>`;
+}
+function emojiValue(id){
+  const b=document.getElementById(id);
+  return (b&&b.dataset.emo)||'📌';
+}
+function setEmojiValue(id,v){
+  const b=document.getElementById(id);
+  if(!b)return;
+  b.dataset.emo=v;
+  const g=b.querySelector('.emoglyph');
+  if(g)g.textContent=v;
+}
+
+/* נקרא אחרי כל render — מחבר כל כפתור שעדיין לא חובר */
+function wireEmoji(root){
+  (root||document).querySelectorAll('.emobtn').forEach(b=>{
+    if(b.dataset.wired)return;
+    b.dataset.wired='1';
+    b.onclick=e=>{e.preventDefault();openEmojiPicker(b)};
+  });
+}
+
+function openEmojiPicker(btn){
+  emoTarget=btn;
+  let pop=document.getElementById('emopop');
+  if(!pop){
+    pop=document.createElement('div');
+    pop.id='emopop';
+    pop.innerHTML=`
+      <div class="emoscrim" id="emoScrim"></div>
+      <div class="emopanel" role="dialog" aria-modal="true" aria-label="בחירת אייקון">
+        <div class="emohead">
+          <input id="emoSearch" placeholder="חיפוש — למשל: רכב, ילדים, חופשה" autocomplete="off">
+          <button type="button" class="emox" id="emoX" aria-label="סגירה">✕</button>
+        </div>
+        <div class="emobody" id="emoBody"></div>
+      </div>`;
+    document.body.appendChild(pop);
+    document.getElementById('emoScrim').onclick=closeEmojiPicker;
+    document.getElementById('emoX').onclick=closeEmojiPicker;
+    document.getElementById('emoSearch').oninput=e=>drawEmoji(e.target.value);
+  }
+  document.getElementById('emoSearch').value='';
+  drawEmoji('');
+  pop.classList.add('on');
+  /* במובייל פתיחת המקלדת מכסה את הרשת, אז לא נותנים פוקוס אוטומטי */
+  if(innerWidth>719)setTimeout(()=>document.getElementById('emoSearch').focus(),30);
+}
+
+function closeEmojiPicker(){
+  const p=document.getElementById('emopop');
+  if(p)p.classList.remove('on');
+  if(emoTarget&&emoTarget.focus)emoTarget.focus();
+  emoTarget=null;
+}
+
+function drawEmoji(q){
+  const body=document.getElementById('emoBody');
+  if(!body)return;
+  const s=(q||'').trim().toLowerCase();
+  const cur=emoTarget?emoTarget.dataset.emo:'';
+  let html='';
+  EMOJI_GROUPS.forEach(([title,gic,items])=>{
+    const hits=s?items.filter(([e,k])=>k.includes(s)||title.toLowerCase().includes(s)):items;
+    if(!hits.length)return;
+    html+=`<div class="emogrp"><div class="emotitle">${gic} ${esc(title)}</div>
+      <div class="emogrid">${hits.map(([e,k])=>
+        `<button type="button" data-e="${e}" aria-pressed="${e===cur}"
+          title="${esc(k)}" aria-label="${esc(k)}">${e}</button>`).join('')}</div></div>`;
+  });
+  body.innerHTML=html||`<div class="emoempty">לא נמצא אימוג'י לחיפוש הזה.<br>
+    נסו מילה אחרת — למשל "בית", "רכב" או "חופשה".</div>`;
+  body.querySelectorAll('button[data-e]').forEach(b=>b.onclick=()=>{
+    if(!emoTarget)return;
+    const t=emoTarget;
+    t.dataset.emo=b.dataset.e;
+    const g=t.querySelector('.emoglyph');
+    if(g)g.textContent=b.dataset.e;
+    closeEmojiPicker();
+    /* קורא לקולבק אם הכפתור ביקש אחד — למשל כדי לשמור מיד */
+    const cb=t.dataset.emoCb;
+    if(cb&&typeof window[cb]==='function')window[cb](b.dataset.e,t);
+  });
+}
+
 /* ==================== ניווט ==================== */
 const NAV=[['dash','📊','דשבורד'],['tx','📝','תנועות'],['budget','🎯','תקציב'],
   ['fixed','🔁','קבועות'],['goals','🏖️','יעדים'],['settings','⚙️','הגדרות']];
@@ -1487,6 +1724,7 @@ function render(){
     fixed:viewFixed,goals:viewGoals,settings:viewSettings})[tab]();
   ({dash:wireDash,tx:wireTx,budget:wireBudget,fixed:wireFixed,
     goals:wireGoals,settings:wireSettings})[tab]();
+  wireEmoji();
 }
 
 /* ==================== דשבורד ==================== */
@@ -1703,10 +1941,16 @@ function wireDash(){
 
 /* ==================== מסך תנועה ==================== */
 let sheetOpen=false, draft=null;
+/* טופס "קטגוריה חדשה" שבתוך מסך הרישום. השדות נשמרים כאן ולא ב-DOM,
+   כי drawSheet() מצייר את כל הגוף מחדש בכל הקשה על המקלדת המספרית. */
+let newCatOpen=false, newCatName='', newCatBud='', newCatIcon='📌';
+function resetNewCat(){newCatOpen=false;newCatName='';newCatBud='';newCatIcon='📌'}
+
 function openSheet(preset){
   /* ברירת המחדל היא אני — מי שפותח את המסך הוא בדרך כלל מי ששילם */
   draft=Object.assign({type:'expense',amount:'',catId:'',memberId:myMemberId(),
     memberLabel:null,date:todayStr(),note:''},preset||{});
+  resetNewCat();
   sheetOpen=true;
   document.getElementById('scrim').classList.add('on');
   document.getElementById('sheet').classList.add('on');
@@ -1736,7 +1980,15 @@ function drawSheet(){
       <button data-k="00">00</button><button data-k="0">0</button><button data-k="del">⌫</button></div>
     <div class="fieldlbl">קטגוריה</div>
     <div class="catgrid" id="sCats">${cats.map(c=>
-      `<button data-id="${c.id}" aria-pressed="${c.id===draft.catId}"><span class="ci">${c.icon}</span>${esc(c.name)}</button>`).join('')}</div>
+      `<button data-id="${c.id}" aria-pressed="${c.id===draft.catId}"><span class="ci">${c.icon}</span>${esc(c.name)}</button>`).join('')}
+      <button class="catnew" data-new="1" aria-pressed="false"><span class="ci">＋</span>חדשה</button></div>
+    ${newCatOpen?`<div class="newcat" id="sNewCat">
+      ${emojiBtn('ncIcon',newCatIcon,'בחירת אייקון')}
+      <input id="ncName" placeholder="${draft.type==='expense'?'שם הקטגוריה':'שם מקור ההכנסה'}" value="${esc(newCatName)}">
+      ${draft.type==='expense'?`<input id="ncBud" class="ncbud" type="number" inputmode="decimal" placeholder="תקציב" value="${newCatBud||''}">`:''}
+      <button class="btn" id="ncAdd">הוספה</button>
+      <button class="btn ghost" id="ncCancel">ביטול</button>
+    </div>`:''}
     <div class="fieldlbl">${draft.type==='expense'?'מי שילם':'מי קיבל'}</div>
     <div class="chipsel" id="sMem">${S.members.map(m=>
       `<button data-id="${m.id}" aria-pressed="${!draft.memberLabel&&m.id===draft.memberId}">${avatar(m)}${esc(m.name)}</button>`).join('')}
@@ -1755,9 +2007,14 @@ function drawSheet(){
   wireSheet();
 }
 function wireSheet(){
-  document.querySelectorAll('#sType button').forEach(b=>b.onclick=()=>{draft.type=b.dataset.v;draft.catId='';drawSheet()});
+  document.querySelectorAll('#sType button').forEach(b=>b.onclick=()=>{
+    draft.type=b.dataset.v;draft.catId='';resetNewCat();drawSheet()});
   document.querySelectorAll('#pad button').forEach(b=>b.onclick=()=>key(b.dataset.k));
-  document.querySelectorAll('#sCats button').forEach(b=>b.onclick=()=>{draft.catId=b.dataset.id;drawSheet()});
+  document.querySelectorAll('#sCats button').forEach(b=>b.onclick=()=>{
+    if(b.dataset.new){newCatOpen=true;drawSheet();
+      const n=document.getElementById('ncName');if(n)n.focus();return}
+    draft.catId=b.dataset.id;drawSheet()});
+  wireNewCat();
   document.querySelectorAll('#sMem button').forEach(b=>b.onclick=()=>{
     if(b.dataset.lbl==='__new'){
       const n=(prompt('שם האדם (מישהו שאין לו חשבון במערכת):')||'').trim();
@@ -1771,6 +2028,36 @@ function wireSheet(){
   document.getElementById('sNote').oninput=e=>draft.note=e.target.value;
   const dup=document.getElementById('sDup');
   if(dup)dup.onclick=()=>{const d=Object.assign({},draft);delete d.id;delete d.mt;delete d.fixed;d.date=todayStr();openSheet(d)};
+}
+
+/* הוספת קטגוריה בלי לצאת מהרישום — הקטגוריה החדשה נבחרת מיד,
+   כדי שהמשתמש יחזור בדיוק לאן שהיה. */
+function wireNewCat(){
+  const box=document.getElementById('sNewCat');
+  if(!box)return;
+  wireEmoji(box);
+  const nm=document.getElementById('ncName'), bd=document.getElementById('ncBud');
+  nm.oninput=e=>newCatName=e.target.value;
+  if(bd)bd.oninput=e=>newCatBud=e.target.value;
+  nm.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submitNewCat()}};
+  document.getElementById('ncAdd').onclick=submitNewCat;
+  document.getElementById('ncCancel').onclick=()=>{resetNewCat();drawSheet()};
+  /* הבורר מודיע לנו מה נבחר, כדי שהבחירה תשרוד ציור מחדש של הגיליון */
+  document.getElementById('ncIcon').dataset.emoCb='ncIconPicked';
+}
+function ncIconPicked(v){newCatIcon=v}
+function submitNewCat(){
+  const name=(newCatName||'').trim();
+  if(!name){toast('צריך שם לקטגוריה');return}
+  const icon=emojiValue('ncIcon');
+  const kind=draft.type==='expense'?'expense':'income';
+  const before=(kind==='income'?S.incomeCats:S.categories).length;
+  const c=addCategory(kind,name,icon,kind==='expense'?(+newCatBud||0):0);
+  const isNew=(kind==='income'?S.incomeCats:S.categories).length>before;
+  draft.catId=c.id;
+  resetNewCat();
+  save();drawSheet();
+  toast(isNew?`"${name}" נוספה ונבחרה ✓`:`"${name}" כבר קיימת — נבחרה ✓`);
 }
 function key(k){
   const a=String(draft.amount||'');
@@ -1807,6 +2094,7 @@ document.getElementById('sheetSave').onclick=saveDraft;
 document.getElementById('sheetDel').onclick=deleteDraft;
 addEventListener('keydown',e=>{
   if(!sheetOpen)return;
+  if(emojiOpen())return;          /* הבורר פתוח מעל הגיליון — Escape שייך לו */
   if(e.key==='Escape')return closeSheet();
   if(document.activeElement&&document.activeElement.tagName==='INPUT')return;
   if(/^[0-9]$/.test(e.key)){key(e.key);e.preventDefault()}
@@ -1853,7 +2141,19 @@ function wireTx(){
   wireTxClicks();
 }
 
-/* ==================== תקציב ==================== */
+/* ==================== תקציב ====================
+   יצירת קטגוריה יושבת כאן ולא בשני מקומות, כי מוסיפים אותה גם ממסך
+   התקציב וגם תוך כדי רישום הוצאה — ושתי הדרכים חייבות ליצור אותו דבר. */
+function addCategory(kind,name,icon,budget){
+  const list=kind==='income'?S.incomeCats:S.categories;
+  const exists=list.find(c=>c.name.trim()===name.trim());
+  if(exists)return exists;                 /* לא יוצרים כפילות בשם */
+  const c=touch({id:uid(),kind,name:name.trim(),icon:icon||(kind==='income'?'💰':'📌'),
+    budget:+budget||0,freq:1,slot:list.length+1});
+  list.push(c);
+  return c;
+}
+
 function viewBudget(){
   const spent=spentByCat(month), tot=S.categories.reduce((a,c)=>a+monthlyAlloc(c),0);
   const inc=totals(month).income;
@@ -1880,7 +2180,7 @@ function viewBudget(){
       </div>`}).join('')}
     </div>
     <div class="toolbar" style="margin:18px 0 0">
-      <input id="newCatIcon" value="📌" style="max-width:56px;text-align:center;font-size:19px">
+      ${emojiBtn('newCatIcon','📌','בחירת אייקון לקטגוריה')}
       <input id="newCat" placeholder="שם קטגוריה חדשה" style="max-width:190px">
       <input id="newCatBud" type="number" placeholder="תקציב" style="max-width:104px">
       <button class="btn" id="addCat">הוספה</button>
@@ -1892,7 +2192,10 @@ function viewBudget(){
     <div class="chipsel" style="margin-bottom:13px">${S.incomeCats.map(i=>
       `<span style="display:inline-flex;align-items:center;gap:7px;background:var(--plane);border:1px solid var(--ring);border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:600">
         ${i.icon} ${esc(i.name)} <b class="delInc" data-id="${i.id}" style="color:var(--muted);cursor:pointer">✕</b></span>`).join('')}</div>
-    <div class="toolbar"><input id="newInc" placeholder="מקור הכנסה חדש" style="max-width:210px"><button class="btn" id="addInc">הוספה</button></div>
+    <div class="toolbar">
+      ${emojiBtn('newIncIcon','💰','בחירת אייקון למקור ההכנסה')}
+      <input id="newInc" placeholder="מקור הכנסה חדש" style="max-width:210px">
+      <button class="btn" id="addInc">הוספה</button></div>
   </div>`;
 }
 function wireBudget(){
@@ -1906,13 +2209,12 @@ function wireBudget(){
   });
   document.getElementById('addCat').onclick=()=>{
     const n=document.getElementById('newCat').value.trim();if(!n)return;
-    S.categories.push(touch({id:uid(),kind:'expense',icon:document.getElementById('newCatIcon').value.trim()||'📌',name:n,
-      budget:+document.getElementById('newCatBud').value||0,slot:S.categories.length+1,freq:1}));
+    addCategory('expense',n,emojiValue('newCatIcon'),+document.getElementById('newCatBud').value||0);
     save();render();toast('הקטגוריה נוספה ✓')};
   document.getElementById('addInc').onclick=()=>{
     const n=document.getElementById('newInc').value.trim();if(!n)return;
-    S.incomeCats.push(touch({id:uid(),kind:'income',icon:'💰',name:n,budget:0,freq:1,
-      slot:S.incomeCats.length+1}));save();render()};
+    addCategory('income',n,emojiValue('newIncIcon'),0);
+    save();render();toast('מקור ההכנסה נוסף ✓')};
   document.querySelectorAll('.delInc').forEach(b=>b.onclick=()=>{removeRec('incomeCats',b.dataset.id);save();render()});
 }
 
@@ -2048,7 +2350,7 @@ function viewGoals(){
     <h2>➕ יעד חדש</h2>
     <div class="grid" style="grid-template-columns:1fr;gap:11px;max-width:540px">
       <div class="toolbar">
-        <input id="gIcon" value="🎯" style="max-width:64px;text-align:center" aria-label="אייקון">
+        ${emojiBtn('gIcon','🎯','בחירת אייקון ליעד')}
         <input id="gName" placeholder="למשל: חופשה ביוון" style="flex:1;min-width:160px">
       </div>
       <div class="toolbar">
@@ -2104,7 +2406,7 @@ function wireGoals(){
     if(!(amt>0)){toast('צריך סכום גדול מאפס');return}
     if(date&&date<todayStr()&&!confirm('התאריך שבחרתם כבר עבר. להמשיך?'))return;
     S.goals.push(touch({id:uid(),ownerId:gKind==='own'?SESSION.user.id:null,
-      name,icon:document.getElementById('gIcon').value.trim()||'🎯',
+      name,icon:emojiValue('gIcon'),
       target:amt,date:date||'',archived:false,createdBy:SESSION.user.id}));
     save(true);render();
     toast(gKind==='own'?'היעד האישי נוסף — רק אתם רואים אותו ✓':'היעד המשפחתי נוסף ✓');
