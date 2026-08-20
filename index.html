@@ -70,11 +70,13 @@ nav.tabs button[aria-selected="true"]{color:var(--s1);border-bottom-color:var(--
 nav.mobnav{display:none}
 @media(max-width:719px){
   nav.tabs{display:none}
-  nav.mobnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;inset-inline:0;bottom:0;z-index:45;
+  nav.mobnav{display:grid;grid-template-columns:repeat(6,1fr);position:fixed;inset-inline:0;bottom:0;z-index:45;
     background:var(--surface-1);border-top:1px solid var(--ring);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
   nav.mobnav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;
     padding:6px 2px;border-radius:11px;color:var(--muted);font-size:10.5px;font-weight:600}
-  nav.mobnav button .ni{font-size:19px;line-height:1}
+  nav.mobnav button .ni{font-size:18px;line-height:1}
+  @media(max-width:400px){nav.mobnav button{font-size:9.5px;padding:7px 0}
+    nav.mobnav button .ni{font-size:17px}}
   nav.mobnav button[aria-selected="true"]{color:var(--s1);background:color-mix(in srgb,var(--s1) 9%,transparent)}
   .wrap{padding:12px 13px 150px}
   .top-in{padding:9px 13px}
@@ -291,6 +293,38 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 .ck-ic{flex:none;width:22px;text-align:center}
 .ck-tag{display:inline-block;background:var(--plane-2);color:var(--text-secondary);
   border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;vertical-align:2px}
+
+/* ---------- יעדי חיסכון ---------- */
+.goals{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}
+@media(max-width:720px){.goals{grid-template-columns:1fr}}
+.goal{background:var(--plane);border:1px solid var(--ring);border-radius:14px;padding:14px 15px}
+.goal.done{border-color:var(--good);background:color-mix(in srgb,var(--good) 7%,var(--plane))}
+.ghead{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.ghead .gic{font-size:19px;line-height:1}
+.ghead .gname{font-weight:700;font-size:15px;flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gtag{font-size:10.5px;font-weight:700;background:color-mix(in srgb,var(--s1) 14%,transparent);
+  color:var(--s1);border-radius:99px;padding:3px 9px;white-space:nowrap}
+.gtag.own{background:color-mix(in srgb,var(--s7) 16%,transparent);color:var(--s7)}
+.gx{background:none;border:0;color:var(--muted);font-size:13px;padding:2px 4px;line-height:1}
+.gx:hover{color:var(--critical)}
+.gnums{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+.gnums b{font-size:20px;font-variant-numeric:tabular-nums}
+.goal .track{height:10px;background:var(--grid);border-radius:99px;overflow:hidden}
+.goal .track .fill{height:100%;border-radius:99px;transition:width .5s cubic-bezier(.2,.7,.3,1)}
+.gnote{margin:9px 0 11px;font-size:12.5px;line-height:1.5}
+.ghist{margin-top:11px;border-top:1px solid var(--ring);padding-top:9px;
+  display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto}
+.grow{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-secondary)}
+.grow b{margin-inline-start:auto;font-variant-numeric:tabular-nums;color:var(--text-primary)}
+
+/* ---------- גילוי נאות ---------- */
+.disc{display:flex;flex-direction:column;gap:15px;margin-top:4px}
+.discrow{display:flex;gap:12px;align-items:flex-start}
+.disc-ic{flex:none;width:26px;text-align:center;font-size:18px;line-height:1.5}
+.discrow b{font-size:14.5px;display:block;margin-bottom:3px}
+.discrow p{margin:0;font-size:13.5px;line-height:1.65;color:var(--text-secondary)}
+.discrow p b{display:inline;font-size:inherit;color:var(--text-primary)}
 
 /* ==================== דף הבית ==================== */
 /* מכסה את האפליקציה לגמרי, עם גלילה משלו — כמו האשף ומסך הכניסה */
@@ -741,18 +775,11 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
     </div>
   </section>
 
-  <section class="land-wrap land-sec">
+  <section class="land-wrap land-sec" id="discSec">
     <div class="privacy">
-      <h2 class="sec-h" style="margin-top:0">על הכסף שלכם — ועל המידע שלכם</h2>
-      <ul class="plist">
-        <li><b>ההפרדה בין משפחות נאכפת בבסיס הנתונים</b>, לא בקוד הדפדפן.
-            משפחה אחת לא יכולה לראות את הכסף של משפחה אחרת, גם לא בטעות.</li>
-        <li><b>אין פרסום, אין מדידה, אין מעקב.</b> אנחנו לא מוכרים מידע ולא משתפים
-            אותו עם צד שלישי למטרות שיווק.</li>
-        <li><b>במכשיר שלכם נשמר רק ההכרחי</b> — שתישארו מחוברים ושנזכור אם בחרתם
-            מצב כהה. הנתונים הפיננסיים יושבים בבסיס הנתונים, לא בדפדפן.</li>
-        <li><b>הנתונים שלכם שלכם.</b> ייצוא ל-Excel או ל-JSON בכל רגע, בלחיצה.</li>
-      </ul>
+      <h2 class="sec-h" style="margin-top:0">גילוי נאות: מי רואה את הנתונים שלכם</h2>
+      <p class="sub" style="text-align:center;margin:-8px 0 20px">בלי אותיות קטנות, בלי הבטחות שאי אפשר לעמוד בהן.</p>
+      <div id="discBox"></div>
     </div>
   </section>
 
@@ -1039,7 +1066,8 @@ const uid=()=>(crypto.randomUUID?crypto.randomUUID():
 const now=()=>Date.now();
 
 function emptyState(){
-  return {categories:[],incomeCats:[],members:[],tx:[],recurring:[],loadedMonths:[],onboarded:false};
+  return {categories:[],incomeCats:[],members:[],tx:[],recurring:[],
+          goals:[],deposits:[],loadedMonths:[],onboarded:false};
 }
 let S=emptyState();
 
@@ -1050,7 +1078,7 @@ let flushTimer=null, flushing=false, lastError=null;
 
 const COLLS=[['tx','transactions'],['categories','categories'],
              ['incomeCats','categories'],['members','household_members'],
-             ['recurring','recurring']];
+             ['recurring','recurring'],['goals','goals'],['deposits','goal_deposits']];
 function collOf(o){
   for(const [k,t] of COLLS) if(S[k].indexOf(o)>=0) return {coll:k,table:t};
   return null;
@@ -1098,7 +1126,13 @@ function setSyncUI(st){
 const toRow={
   transactions:o=>({id:o.id,household_id:HH.id,kind:o.type||'expense',amount:o.amount,
     occurred_on:o.date,category_id:o.catId||null,member_id:o.memberId||null,
-    member_label:o.memberLabel||null,note:o.note||null,is_fixed:!!o.fixed}),
+    member_label:o.memberLabel||null,note:o.note||null,is_fixed:!!o.fixed,
+    goal_id:o.goalId||null}),
+  goals:o=>({id:o.id,household_id:HH.id,owner_id:o.ownerId||null,name:o.name,
+    icon:o.icon||'🎯',target_amount:+o.target||0,target_date:o.date||null,
+    archived:!!o.archived,created_by:o.createdBy||SESSION.user.id}),
+  goal_deposits:o=>({id:o.id,goal_id:o.goalId,household_id:HH.id,amount:+o.amount,
+    occurred_on:o.date,note:o.note||null,created_by:o.createdBy||SESSION.user.id}),
   categories:o=>({id:o.id,household_id:HH.id,kind:o.kind||(S.incomeCats.indexOf(o)>=0?'income':'expense'),
     name:o.name,icon:o.icon||'📌',budget:+o.budget||0,freq:Math.max(1,+o.freq||1),slot:+o.slot||1}),
   household_members:o=>({household_id:HH.id,user_id:o.id,display_name:o.name,slot:+o.slot||1}),
@@ -1108,7 +1142,13 @@ const toRow={
 };
 const fromRow={
   transactions:r=>({id:r.id,type:r.kind,amount:+r.amount,date:r.occurred_on,catId:r.category_id,
-    memberId:r.member_id,memberLabel:r.member_label,note:r.note||'',fixed:!!r.is_fixed,mt:0}),
+    memberId:r.member_id,memberLabel:r.member_label,note:r.note||'',fixed:!!r.is_fixed,
+    goalId:r.goal_id||null,mt:0}),
+  goals:r=>({id:r.id,ownerId:r.owner_id||null,name:r.name,icon:r.icon||'🎯',
+    target:+r.target_amount||0,date:r.target_date||'',archived:!!r.archived,
+    createdBy:r.created_by,mt:0}),
+  goal_deposits:r=>({id:r.id,goalId:r.goal_id,amount:+r.amount,date:r.occurred_on,
+    note:r.note||'',createdBy:r.created_by,mt:0}),
   category:r=>({id:r.id,kind:r.kind,name:r.name,icon:r.icon,budget:+r.budget,
     freq:+r.freq||1,slot:+r.slot||1,mt:0}),
   household_members:r=>({id:r.user_id,name:r.display_name,slot:+r.slot||1,role:r.role,mt:0}),
@@ -1187,12 +1227,14 @@ async function loadHousehold(){
 
 async function loadAll(){
   if(!HH)return;
-  const [cats,txs,recs,mems,months]=await Promise.all([
+  const [cats,txs,recs,mems,months,gls,deps]=await Promise.all([
     sb.from('categories').select('*').eq('household_id',HH.id).eq('archived',false),
     sb.from('transactions').select('*').eq('household_id',HH.id).order('occurred_on',{ascending:false}),
     sb.from('recurring').select('*').eq('household_id',HH.id),
     sb.from('household_members').select('*').eq('household_id',HH.id),
     sb.from('loaded_months').select('month').eq('household_id',HH.id),
+    sb.from('goals').select('*').eq('household_id',HH.id).eq('archived',false),
+    sb.from('goal_deposits').select('*').eq('household_id',HH.id),
   ]);
   for(const r of [cats,txs,recs,mems,months]) if(r.error) throw r.error;
   const all=(cats.data||[]).map(fromRow.category);
@@ -1201,6 +1243,9 @@ async function loadAll(){
   S.tx         = (txs.data||[]).map(fromRow.transactions);
   S.recurring  = (recs.data||[]).map(fromRow.recurring);
   S.members    = (mems.data||[]).map(fromRow.household_members).sort((a,b)=>a.slot-b.slot);
+  /* היעדים עדיין עלולים להיות חסרים אם עדכון 3 לא רץ — לא מפילים את הטעינה */
+  S.goals    = (gls&&!gls.error) ? (gls.data||[]).map(fromRow.goals) : [];
+  S.deposits = (deps&&!deps.error)? (deps.data||[]).map(fromRow.goal_deposits) : [];
   S.loadedMonths=(months.data||[]).map(r=>r.month);
   S.onboarded  = !!(HH&&HH.onboarded);
   DIRTY.clear();GONE.length=0;
@@ -1425,7 +1470,8 @@ async function signOut(){
 }
 
 /* ==================== ניווט ==================== */
-const NAV=[['dash','📊','דשבורד'],['tx','📝','תנועות'],['budget','🎯','תקציב'],['fixed','🔁','קבועות'],['settings','⚙️','הגדרות']];
+const NAV=[['dash','📊','דשבורד'],['tx','📝','תנועות'],['budget','🎯','תקציב'],
+  ['fixed','🔁','קבועות'],['goals','🏖️','יעדים'],['settings','⚙️','הגדרות']];
 function renderNav(){
   document.getElementById('tabs').innerHTML=NAV.map(([k,i,l])=>`<button data-tab="${k}" aria-selected="${k===tab}"><span>${i}</span>${l}</button>`).join('');
   document.getElementById('mobnav').innerHTML=NAV.map(([k,i,l])=>`<button data-tab="${k}" aria-selected="${k===tab}"><span class="ni">${i}</span>${l}</button>`).join('');
@@ -1437,8 +1483,10 @@ function render(){
   document.getElementById('footNote').innerHTML=HH
     ?`${esc(HH.name)} · הנתונים שמורים בשרת ומסונכרנים בין כל המכשירים`
     :'';
-  document.getElementById('view').innerHTML=({dash:viewDash,tx:viewTx,budget:viewBudget,fixed:viewFixed,settings:viewSettings})[tab]();
-  ({dash:wireDash,tx:wireTx,budget:wireBudget,fixed:wireFixed,settings:wireSettings})[tab]();
+  document.getElementById('view').innerHTML=({dash:viewDash,tx:viewTx,budget:viewBudget,
+    fixed:viewFixed,goals:viewGoals,settings:viewSettings})[tab]();
+  ({dash:wireDash,tx:wireTx,budget:wireBudget,fixed:wireFixed,
+    goals:wireGoals,settings:wireSettings})[tab]();
 }
 
 /* ==================== דשבורד ==================== */
@@ -1922,6 +1970,247 @@ function wireFixed(){
 
 /* ==================== הגדרות ==================== */
 
+/* ==================== יעדי חיסכון ====================
+   יעד משפחתי — כל בני הבית רואים ומפקידים, וההפקדה נרשמת גם כתנועה
+   כדי שהתקציב החודשי יישאר נכון.
+   יעד אישי — רק הבעלים רואה אותו (נאכף ב-RLS), וההפקדה אינה נכנסת
+   לתנועות הבית. */
+
+let goalDraft=null;
+
+const goalSaved=g=>S.deposits.filter(d=>d.goalId===g.id).reduce((a,d)=>a+(+d.amount||0),0);
+const goalPct=g=>g.target>0?Math.min(100,goalSaved(g)/g.target*100):0;
+
+/* כמה צריך להפריש כל חודש כדי להספיק בזמן */
+function goalPace(g){
+  if(!g.date)return null;
+  const today=new Date(), end=new Date(g.date+'T00:00:00');
+  const months=Math.max(0,(end.getFullYear()-today.getFullYear())*12
+                        +(end.getMonth()-today.getMonth()));
+  const left=Math.max(0,g.target-goalSaved(g));
+  return {months,left,per:months>0?left/months:left,late:end<today&&left>0};
+}
+function goalDateLabel(g){
+  if(!g.date)return 'בלי תאריך יעד';
+  return 'עד '+MONTHS[+g.date.slice(5,7)-1]+' '+g.date.slice(0,4);
+}
+
+function viewGoals(){
+  const mine=S.goals.filter(g=>g.ownerId), shared=S.goals.filter(g=>!g.ownerId);
+  const card=g=>{
+    const sv=goalSaved(g), pct=goalPct(g), pc=goalPace(g), left=Math.max(0,g.target-sv);
+    const done=sv>=g.target;
+    const col=done?'var(--good)':g.ownerId?'var(--s7)':'var(--s1)';
+    return `
+    <div class="goal ${done?'done':''}">
+      <div class="ghead">
+        <span class="gic">${g.icon||'🎯'}</span>
+        <span class="gname">${esc(g.name)}</span>
+        <span class="gtag ${g.ownerId?'own':''}">${g.ownerId?'🔒 אישי':'👨‍👩‍👧 משפחתי'}</span>
+        <button class="gx delGoal" data-id="${g.id}" aria-label="מחיקת היעד">✕</button>
+      </div>
+      <div class="gnums">
+        <b style="color:${col}">${money(sv)}</b>
+        <span class="sub">מתוך ${money(g.target)} · ${goalDateLabel(g)}</span>
+      </div>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${col}"></div></div>
+      <p class="sub gnote">${done?'🎉 הגעתם ליעד!'
+        :pc?(pc.late?`<span class="neg">התאריך עבר ועוד חסרים ${money(pc.left)}</span>`
+             :pc.months?`נותרו ${money(left)} · כ-${money(pc.per)} בחודש ל-${pc.months} החודשים הבאים`
+             :`נותרו ${money(left)} · החודש האחרון`)
+        :`נותרו ${money(left)}`}</p>
+      <div class="toolbar">
+        <button class="btn sm depGoal" data-id="${g.id}">+ הפקדה</button>
+        ${sv>0?`<button class="btn ghost sm histGoal" data-id="${g.id}">${S.deposits.filter(d=>d.goalId===g.id).length} הפקדות</button>`:''}
+      </div>
+      <div class="ghist hide" id="gh-${g.id}"></div>
+    </div>`;
+  };
+
+  return `
+  <div class="card">
+    <h2>🏖️ יעדי חיסכון</h2>
+    <p class="sub">חופשה, בר מצווה, רכב — מגדירים סכום ותאריך, והמערכת אומרת
+      כמה להפריש כל חודש וכמה כבר נחסך.</p>
+    ${S.goals.length?'':`<div class="empty"><span class="eic">🏖️</span>
+      עדיין אין יעדים.<br>הוסיפו את הראשון למטה — למשל "חופשה בקיץ".</div>`}
+  </div>
+
+  ${shared.length?`<div class="card"><h2>👨‍👩‍👧 יעדים משפחתיים</h2>
+    <p class="sub">כל בני הבית רואים אותם, וכל הפקדה נרשמת גם כתנועה בתקציב החודשי.</p>
+    <div class="goals">${shared.map(card).join('')}</div></div>`:''}
+
+  ${mine.length?`<div class="card"><h2>🔒 היעדים האישיים שלי</h2>
+    <p class="sub">בני המשפחה לא רואים אותם, וההפקדות אליהם לא מופיעות בתנועות הבית.</p>
+    <div class="goals">${mine.map(card).join('')}</div></div>`:''}
+
+  <div class="card">
+    <h2>➕ יעד חדש</h2>
+    <div class="grid" style="grid-template-columns:1fr;gap:11px;max-width:540px">
+      <div class="toolbar">
+        <input id="gIcon" value="🎯" style="max-width:64px;text-align:center" aria-label="אייקון">
+        <input id="gName" placeholder="למשל: חופשה ביוון" style="flex:1;min-width:160px">
+      </div>
+      <div class="toolbar">
+        <label class="f" style="flex:1;min-width:150px">כמה צריך לחסוך
+          <input id="gAmt" type="number" inputmode="decimal" placeholder="₪"></label>
+        <label class="f" style="flex:1;min-width:150px">עד מתי (לא חובה)
+          <input id="gDate" type="date"></label>
+      </div>
+      <div class="fieldlbl" style="margin:2px 0 0">מי רואה את היעד?</div>
+      <div class="seg" id="gKind">
+        <button data-v="shared" aria-pressed="true">👨‍👩‍👧 משפחתי</button>
+        <button data-v="own" aria-pressed="false">🔒 אישי</button>
+      </div>
+      <p class="sub" id="gKindNote" style="margin:0">כל בני המשפחה יראו את היעד ואת ההתקדמות,
+        וכל הפקדה תיכנס גם לתקציב החודשי.</p>
+      <button class="btn" id="addGoal">הוספת היעד</button>
+    </div>
+  </div>`;
+}
+
+async function addDeposit(goal,amount,date){
+  const amt=+amount;
+  if(!(amt>0))return false;
+  const d=date||todayStr();
+  S.deposits.push(touch({id:uid(),goalId:goal.id,amount:amt,date:d,note:''}));
+  if(!goal.ownerId){
+    /* יעד משפחתי — הכסף באמת יצא מהכיס של הבית, אז הוא גם תנועה */
+    const c=S.categories.find(x=>/חיסכון/.test(x.name))||S.categories[0];
+    S.tx.push(touch({id:uid(),type:'expense',amount:amt,date:d,
+      catId:c?c.id:null,memberId:myMemberId(),memberLabel:null,
+      goalId:goal.id,note:'הפקדה ל'+goal.name}));
+  }
+  save(true);
+  return true;
+}
+
+function wireGoals(){
+  let gKind='shared';
+  document.querySelectorAll('#gKind button').forEach(b=>b.onclick=()=>{
+    gKind=b.dataset.v;
+    document.querySelectorAll('#gKind button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    document.getElementById('gKindNote').textContent=gKind==='shared'
+      ? 'כל בני המשפחה יראו את היעד ואת ההתקדמות, וכל הפקדה תיכנס גם לתקציב החודשי.'
+      : 'רק אתם תראו את היעד. ההפקדות אליו לא יופיעו בתנועות של הבית ולא בתקציב החודשי.';
+  });
+
+  const add=document.getElementById('addGoal');
+  if(add)add.onclick=()=>{
+    const name=document.getElementById('gName').value.trim();
+    const amt=+document.getElementById('gAmt').value;
+    const date=document.getElementById('gDate').value;
+    if(!name){toast('צריך שם ליעד');return}
+    if(!(amt>0)){toast('צריך סכום גדול מאפס');return}
+    if(date&&date<todayStr()&&!confirm('התאריך שבחרתם כבר עבר. להמשיך?'))return;
+    S.goals.push(touch({id:uid(),ownerId:gKind==='own'?SESSION.user.id:null,
+      name,icon:document.getElementById('gIcon').value.trim()||'🎯',
+      target:amt,date:date||'',archived:false,createdBy:SESSION.user.id}));
+    save(true);render();
+    toast(gKind==='own'?'היעד האישי נוסף — רק אתם רואים אותו ✓':'היעד המשפחתי נוסף ✓');
+  };
+
+  document.querySelectorAll('.depGoal').forEach(b=>b.onclick=async()=>{
+    const g=S.goals.find(x=>x.id===b.dataset.id);
+    if(!g)return;
+    const v=prompt(`כמה להפקיד ל"${g.name}"?`,'');
+    if(v===null)return;
+    if(!(+v>0)){toast('סכום לא תקין');return}
+    await addDeposit(g,+v);
+    render();
+    toast(goalSaved(g)>=g.target?'הגעתם ליעד! 🎉':`הופקדו ${money(+v)} ✓`);
+  });
+
+  document.querySelectorAll('.histGoal').forEach(b=>b.onclick=()=>{
+    const box=document.getElementById('gh-'+b.dataset.id);
+    if(!box)return;
+    const open=!box.classList.contains('hide');
+    if(open){box.classList.add('hide');return}
+    const list=S.deposits.filter(d=>d.goalId===b.dataset.id)
+      .sort((x,y)=>y.date.localeCompare(x.date));
+    box.innerHTML=list.map(d=>`<div class="grow">
+      <span>${d.date.slice(8,10)}/${d.date.slice(5,7)}/${d.date.slice(0,4)}</span>
+      <b>${money(d.amount)}</b>
+      <button class="gx delDep" data-id="${d.id}" aria-label="מחיקת ההפקדה">✕</button></div>`).join('');
+    box.classList.remove('hide');
+    box.querySelectorAll('.delDep').forEach(x=>x.onclick=()=>{
+      const dep=S.deposits.find(z=>z.id===x.dataset.id);
+      if(!dep||!confirm('למחוק את ההפקדה?'))return;
+      removeRec('deposits',dep.id);
+      /* אם זו הייתה הפקדה משפחתית, גם התנועה המשויכת יורדת */
+      const tx=S.tx.find(t=>t.goalId===dep.goalId&&t.amount===dep.amount&&t.date===dep.date);
+      if(tx)removeRec('tx',tx.id);
+      save(true);render();toast('ההפקדה נמחקה');
+    });
+  });
+
+  document.querySelectorAll('.delGoal').forEach(b=>b.onclick=()=>{
+    const g=S.goals.find(x=>x.id===b.dataset.id);
+    if(!g)return;
+    const n=S.deposits.filter(d=>d.goalId===g.id).length;
+    if(!confirm(`למחוק את היעד "${g.name}"?`+(n?`\n\n${n} ההפקדות שנרשמו אליו יימחקו גם הן.`:'')
+      +'\n\nהתנועות שכבר נרשמו בתקציב יישארו.'))return;
+    S.deposits.filter(d=>d.goalId===g.id).forEach(d=>removeRec('deposits',d.id));
+    S.tx.filter(t=>t.goalId===g.id).forEach(t=>{touch(t);t.goalId=null});
+    removeRec('goals',g.id);
+    save(true);render();toast('היעד נמחק');
+  });
+}
+
+/* ==================== גילוי נאות ====================
+   מקור אחד לנוסח, שמוצג גם בדף הבית וגם בתוך האפליקציה.
+
+   הנוסח נכתב במכוון בלי הבטחות שאי אפשר לעמוד בהן. המידע אינו מוצפן
+   מקצה לקצה, ולכן למפעיל השירות יש גישה טכנית אליו — וזה נאמר כאן
+   במפורש ולא נקבר. */
+
+const DISCLOSURE=[
+  ['👨‍👩‍👧','מי רואה את הנתונים שלכם',
+   'רק בני המשפחה שהוזמנו לחשבון שלכם. משפחה אחרת לא רואה אתכם, ואתם לא רואים אותה. '
+   +'יעד חיסכון שסימנתם כ<b>אישי</b> נראה לכם בלבד — גם בני הבית לא רואים אותו ולא את ההפקדות אליו.'],
+
+  ['🔐','ההפרדה נאכפת בשרת, לא בדפדפן',
+   'ההרשאות יושבות בבסיס הנתונים עצמו (Row Level Security). גם מי שישיג את מפתח הגישה '
+   +'הציבורי של האתר לא יוכל למשוך נתונים של משפחה שהוא לא חבר בה. זה נבדק אוטומטית '
+   +'בכל שינוי בקוד.'],
+
+  ['🚫','אין פרסום, אין מדידה, אין מעקב',
+   'אין באתר פרסומות, כלי אנליטיקה, פיקסלים או עוגיות מעקב. איננו מוכרים מידע, '
+   +'ואיננו משתפים אותו עם צד שלישי למטרות שיווק. לעולם.'],
+
+  ['🛠️','מה שכן — למי יש גישה טכנית',
+   '<b>המידע אינו מוצפן מקצה לקצה.</b> מי שמפעיל את השירות יכול לגשת לבסיס הנתונים '
+   +'לצורכי תחזוקה, גיבוי ותמיכה — כמו בכל שירות שאינו מוצפן קצה-לקצה. '
+   +'אנחנו לא עושים בו שימוש אחר, אבל היכולת הטכנית קיימת, ונכון שתדעו.'],
+
+  ['🏢','על מי התשתית נשענת',
+   'אחסון הנתונים וההרשמה: Supabase. שליחת מיילים: Resend. הגשת הדף: GitHub Pages. '
+   +'הם מספקים את התשתית ואינם עושים שימוש עצמאי במידע שלכם.'],
+
+  ['🔒','הצפנה',
+   'התקשורת מוצפנת (HTTPS), והנתונים מוצפנים גם באחסון. סיסמאות נשמרות מגובבות '
+   +'ואינן ניתנות לשחזור — גם לא על ידינו.'],
+
+  ['📤','הנתונים שלכם — שלכם',
+   'ייצוא מלא ל-Excel או ל-JSON בכל רגע, מההגדרות. רוצים שנמחק הכול? בקשה אחת, ונמחק.'],
+];
+
+function disclosureHtml(){
+  return `<div class="disc">${DISCLOSURE.map(([ic,t,d])=>`
+    <div class="discrow"><span class="disc-ic">${ic}</span>
+      <div><b>${t}</b><p>${d}</p></div></div>`).join('')}</div>`;
+}
+
+/* בתוך האפליקציה — כרטיס בהגדרות */
+function disclosureCard(){
+  return `
+  <div class="card">
+    <h2>🛡️ גילוי נאות: מי רואה את הנתונים</h2>
+    <p class="sub">בלי אותיות קטנות. אם משהו כאן לא מדויק — זו תקלה, ואנחנו רוצים לדעת עליה.</p>
+    ${disclosureHtml()}
+  </div>`;
+}
+
 /* ==================== הגדרות ==================== */
 function installCard(){
   if(STANDALONE)return `
@@ -1977,6 +2266,8 @@ function viewSettings(){
     </div>
     <p class="sub" style="margin:4px 0 0">${S.tx.length} תנועות · ${S.categories.length} קטגוריות · ${S.recurring.length} הוראות קבע</p>
   </div>
+
+  ${disclosureCard()}
 
   ${cookieCard()}
 
@@ -2281,6 +2572,9 @@ function runKeypad(){
 }
 
 function wireLanding(){
+  const box=document.getElementById('discBox');
+  if(box&&!box.childElementCount)box.innerHTML=disclosureHtml();
+
   const go=()=>{hideLanding();showAuth()};
   ['landLogin','heroLogin','footLogin'].forEach(id=>{
     const b=document.getElementById(id);if(b)b.onclick=go;
