@@ -1051,7 +1051,38 @@ function who(t){
 const txOf=m=>S.tx.filter(t=>t.date.slice(0,7)===m);
 const FREQ=[[1,'חודשי'],[2,'כל חודשיים'],[3,'רבעוני'],[6,'חצי שנתי'],[12,'שנתי']];
 const freqLabel=f=>(FREQ.find(x=>x[0]===(+f||1))||FREQ[0])[1];
-const monthlyAlloc=c=>(+c.budget||0)/Math.max(1,+c.freq||1);
+/* ---------- תקציב לפי חודש ----------
+   c.budgetHistory היא מפה דלילה של חודש -> סכום, שנרשמת רק כשהתקציב
+   משתנה. התקציב של חודש כלשהו הוא הערך של המפתח הגדול ביותר שאינו
+   גדול ממנו. המפתח '0000-00' הוא "מאז ומעולם".
+
+   בלי זה, העלאת תקציב היום הייתה משנה למפרע את התשובה לשאלה
+   "האם עמדנו בתקציב במרץ" — והמערכת מאפשרת לנווט למרץ ולשאול. */
+const FOREVER='0000-00';
+function budgetAt(c,m){
+  const h=c&&c.budgetHistory;
+  if(h){
+    let best=null;
+    for(const k in h) if(k<=m && (best===null||k>best)) best=k;
+    if(best!==null)return +h[best]||0;
+  }
+  return +((c||{}).budget)||0;
+}
+/* שינוי תקציב חל מהחודש המוצג ואילך, עד השינוי הבא שנרשם אחריו.
+   בפעם הראשונה שומרים גם את מה שהיה עד אז, אחרת החודשים הקודמים
+   היו נופלים חזרה על c.budget החדש. */
+function setBudgetAt(c,m,v){
+  const h=c.budgetHistory||(c.budgetHistory={});
+  if(!Object.keys(h).length)h[FOREVER]=+c.budget||0;
+  h[m]=+v||0;
+  c.budget=budgetAt(c,thisMonth());
+  return touch(c);
+}
+/* בהקמה אין עדיין היסטוריה, והמשתמש מגדיר "זה התקציב" ולא "מהחודש
+   הזה" — אז מנקים את המפה במקום להוסיף לה נקודת שבירה מיותרת. */
+function setBudgetAlways(c,v){c.budgetHistory={};c.budget=+v||0;return touch(c)}
+const monthlyAllocAt=(c,m)=>budgetAt(c,m)/Math.max(1,+c.freq||1);
+const monthlyAlloc=c=>monthlyAllocAt(c,thisMonth());
 
 function totals(m){const t=txOf(m);
   const income=t.filter(x=>x.type==='income').reduce((a,b)=>a+b.amount,0);
@@ -1062,7 +1093,7 @@ function spentByCat(m){const o={};txOf(m).filter(t=>t.type==='expense').forEach(
 function usage(c,m){
   const f=Math.max(1,+c.freq||1);let sp=0;
   for(let i=0;i<f;i++)sp+=(spentByCat(shiftMonth(m,-i))[c.id]||0);
-  const b=+c.budget||0;
+  const b=budgetAt(c,m);
   return{sp,b,f,pct:b?sp/b*100:(sp?100:0)};
 }
 function status(pct){
@@ -1077,7 +1108,7 @@ function pace(m){
   const d=new Date(), day=d.getDate(), dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
   const frac=day/dim;
   const varCats=S.categories.filter(c=>!isFixedCat(c.id));
-  const budget=varCats.reduce((a,c)=>a+monthlyAlloc(c),0);
+  const budget=varCats.reduce((a,c)=>a+monthlyAllocAt(c,m),0);
   if(!budget)return null;
   const ids=new Set(varCats.map(c=>c.id));
   const spent=txOf(m).filter(t=>t.type==='expense'&&ids.has(t.catId)).reduce((a,t)=>a+t.amount,0);
@@ -1156,8 +1187,61 @@ function undoRemove(coll,rec){
 
 function save(immediate){
   clearTimeout(flushTimer);
+  saveOutbox();                           /* קודם לדיסק, אחר כך לשרת */
   if(immediate===false)return;            /* תאימות לקוד ישן שקרא save(false) */
   flushTimer=setTimeout(flush,immediate===true?0:500);
+}
+
+/* ==================== תור שמירה מתמיד ====================
+   DIRTY ו-GONE חיו עד עכשיו בזיכרון בלבד. מי שרשם הוצאה בסופר בלי קליטה
+   ואז המערכת נסגרה ברקע — איבד אותה בשקט. אזהרת beforeunload לא נורית
+   במובייל, אז היא לא הגנה.
+
+   לכן כל שינוי שממתין לשרת נכתב מיד גם ל-localStorage, ומשוחזר בטעינה
+   הבאה. התור מפוצל לפי משפחה, כדי שהתחברות לחשבון אחר לא תדרוס את מה
+   שממתין לחשבון הקודם. */
+const OUTBOX_PREFIX='hakis-outbox-';
+const outboxKey=hid=>OUTBOX_PREFIX+(hid||(HH&&HH.id)||'none');
+
+function saveOutbox(){
+  if(!HH)return;
+  try{
+    const rows=[];
+    DIRTY.forEach(o=>{const c=collOf(o);if(c)rows.push({coll:c.coll,obj:o})});
+    const gone=GONE.map(g=>({table:g.table,id:g.id,coll:g.coll}));
+    if(!rows.length&&!gone.length)localStorage.removeItem(outboxKey());
+    else localStorage.setItem(outboxKey(),JSON.stringify(
+      {hh:HH.id,user:SESSION&&SESSION.user&&SESSION.user.id,at:now(),rows,gone}));
+  }catch(e){/* אחסון מלא או חסום — לא מפילים בגלל זה את הרישום */}
+}
+function readOutbox(){
+  try{
+    const s=JSON.parse(localStorage.getItem(outboxKey())||'null');
+    if(!s||s.hh!==HH.id)return null;
+    return (s.rows&&s.rows.length)||(s.gone&&s.gone.length)?s:null;
+  }catch(e){return null}
+}
+function clearOutbox(){try{localStorage.removeItem(outboxKey())}catch(e){}}
+
+/* נקרא אחרי loadAll: מה שלא הספיק להגיע לשרת חוזר למצב וגם לתור.
+   הגרסה המקומית מנצחת את מה שהתקבל מהשרת — היא נכתבה כאן, מעולם לא
+   נשלחה, ולכן היא בהכרח מאוחרת יותר מהשורה שהשרת מכיר. */
+function restoreOutbox(){
+  const s=readOutbox();
+  if(!s)return 0;
+  let n=0;
+  (s.rows||[]).forEach(({coll,obj})=>{
+    if(!obj||!obj.id||!S[coll])return;
+    const i=S[coll].findIndex(x=>x.id===obj.id);
+    if(i>=0)S[coll][i]=Object.assign(S[coll][i],obj); else S[coll].push(obj);
+    DIRTY.add(S[coll][i>=0?i:S[coll].length-1]);n++;
+  });
+  (s.gone||[]).forEach(g=>{
+    if(!g||!g.table||!g.id)return;
+    if(g.coll&&S[g.coll])S[g.coll]=S[g.coll].filter(r=>r.id!==g.id);
+    if(!GONE.some(x=>x.id===g.id&&x.table===g.table))GONE.push(g);n++;
+  });
+  return n;
 }
 
 /* נורית המצב בכותרת: ירוק=נשמר, צהוב=בדרך לשרת, אדום=נכשל */
@@ -1185,7 +1269,8 @@ const toRow={
   goal_deposits:o=>({id:o.id,goal_id:o.goalId,household_id:HH.id,amount:+o.amount,
     occurred_on:o.date,note:o.note||null,created_by:o.createdBy||SESSION.user.id}),
   categories:o=>({id:o.id,household_id:HH.id,kind:o.kind||(S.incomeCats.indexOf(o)>=0?'income':'expense'),
-    name:o.name,icon:o.icon||'📌',budget:+o.budget||0,freq:Math.max(1,+o.freq||1),slot:+o.slot||1}),
+    name:o.name,icon:o.icon||'📌',budget:+o.budget||0,freq:Math.max(1,+o.freq||1),slot:+o.slot||1,
+    budget_history:o.budgetHistory||{}}),
   household_members:o=>({household_id:HH.id,user_id:o.id,display_name:o.name,slot:+o.slot||1}),
   recurring:o=>({id:o.id,household_id:HH.id,name:o.name,amount:o.amount,
     category_id:o.catId||null,member_id:o.memberId||null,
@@ -1201,6 +1286,7 @@ const fromRow={
   goal_deposits:r=>({id:r.id,goalId:r.goal_id,amount:+r.amount,date:r.occurred_on,
     note:r.note||'',createdBy:r.created_by,mt:0}),
   category:r=>({id:r.id,kind:r.kind,name:r.name,icon:r.icon,budget:+r.budget,
+    budgetHistory:r.budget_history||{},
     freq:+r.freq||1,slot:+r.slot||1,mt:0}),
   household_members:r=>({id:r.user_id,name:r.display_name,slot:+r.slot||1,role:r.role,mt:0}),
   recurring:r=>({id:r.id,name:r.name,amount:+r.amount,catId:r.category_id,memberId:r.member_id,
@@ -1237,11 +1323,13 @@ async function flush(){
     }
     dirty.forEach(o=>DIRTY.delete(o));
     lastError=null;setSyncUI('ok');
+    saveOutbox();                        /* מה שהגיע לשרת יורד מהדיסק */
     return true;
   }catch(e){
     gone.forEach(g=>GONE.push(g));       /* להחזיר לתור, לא לאבד מחיקות */
     lastError=e.message||String(e);
     setSyncUI('err');
+    saveOutbox();                        /* ובעיקר: מה שלא הגיע — נשאר */
     toast('השמירה נכשלה: '+lastError);
     return false;
   }finally{flushing=false}
@@ -1501,8 +1589,15 @@ async function afterAuth(nameHint){
     return;
   }
   await loadAll();
+  /* מה שנרשם בלי קליטה ולא הספיק להגיע לשרת חוזר עכשיו — לפני שהמסך
+     מצויר, כדי שהמשתמש לא יראה לרגע שהתנועה שלו נעלמה. */
+  const back=restoreOutbox();
   hideAuth();
   render();
+  if(back){
+    setSyncUI('busy');
+    flush().then(okd=>{if(okd)toast(`${back} שינויים שלא נשלחו נשמרו עכשיו ✓`);render()});
+  }
   if(!S.onboarded)startWizard();
 }
 
@@ -1730,12 +1825,12 @@ function render(){
 /* ==================== דשבורד ==================== */
 function viewDash(){
   const{income,expense,net}=totals(month);
-  const budgetTotal=S.categories.reduce((a,c)=>a+monthlyAlloc(c),0);
+  const budgetTotal=S.categories.reduce((a,c)=>a+monthlyAllocAt(c,month),0);
   const pct=budgetTotal?expense/budgetTotal*100:0;
   const st=status(pct), pc=pace(month);
   const use={};S.categories.forEach(c=>use[c.id]=usage(c,month));
-  const over=S.categories.filter(c=>c.budget>0&&use[c.id].pct>100);
-  const near=S.categories.filter(c=>c.budget>0&&use[c.id].pct<=100&&use[c.id].pct>=85);
+  const over=S.categories.filter(c=>use[c.id].b>0&&use[c.id].pct>100);
+  const near=S.categories.filter(c=>use[c.id].b>0&&use[c.id].pct<=100&&use[c.id].pct>=85);
   const nAlerts=over.length+near.length+(net<0?1:0);
 
   let bar;
@@ -1752,8 +1847,8 @@ function viewDash(){
   if(alertsOpen&&nAlerts){
     list='<div class="alertlist">';
     if(net<0)list+=`<div class="row crit"><span>⛔</span><span>ההוצאות גבוהות מההכנסות ב-<b>${money(-net)}</b> החודש.</span></div>`;
-    over.forEach(c=>list+=`<div class="row crit"><span>${c.icon}</span><span><b>${esc(c.name)}</b> — חריגה של ${money(use[c.id].sp-c.budget)}${c.freq>1?` (נמדד על ${c.freq} החודשים האחרונים)`:''}.</span></div>`);
-    near.forEach(c=>list+=`<div class="row warn"><span>${c.icon}</span><span><b>${esc(c.name)}</b> — נותרו ${money(c.budget-use[c.id].sp)}.</span></div>`);
+    over.forEach(c=>list+=`<div class="row crit"><span>${c.icon}</span><span><b>${esc(c.name)}</b> — חריגה של ${money(use[c.id].sp-use[c.id].b)}${c.freq>1?` (נמדד על ${c.freq} החודשים האחרונים)`:''}.</span></div>`);
+    near.forEach(c=>list+=`<div class="row warn"><span>${c.icon}</span><span><b>${esc(c.name)}</b> — נותרו ${money(use[c.id].b-use[c.id].sp)}.</span></div>`);
     list+='</div>';
   }
   /* בהזמנה של בן משפחה אין טעם להציק על גיבויים — הנתונים בשרת. */
@@ -2155,28 +2250,29 @@ function addCategory(kind,name,icon,budget){
 }
 
 function viewBudget(){
-  const spent=spentByCat(month), tot=S.categories.reduce((a,c)=>a+monthlyAlloc(c),0);
+  const spent=spentByCat(month), tot=S.categories.reduce((a,c)=>a+monthlyAllocAt(c,month),0);
   const inc=totals(month).income;
   return `
   <div class="card">
-    <h2>🎯 התקציב החודשי</h2>
+    <h2>🎯 התקציב של ${monthLabel(month)}</h2>
     <p class="sub">שווה-ערך חודשי: <b>${money(tot)}</b>${inc?` · מול הכנסות של ${money(inc)} → ${tot<=inc?`<span class="pos">נשאר ${money(inc-tot)} לחיסכון</span>`:`<span class="neg">חסרים ${money(tot-inc)}</span>`}`:''}
-      <br>✏️ אפשר ללחוץ על כל שם או סכום ולערוך ישירות. לחשבונות שאינם חודשיים (ארנונה, מים) בחרו תדירות — הסכום הוא לכל תשלום.</p>
+      <br>✏️ אפשר ללחוץ על כל שם או סכום ולערוך ישירות. לחשבונות שאינם חודשיים (ארנונה, מים) בחרו תדירות — הסכום הוא לכל תשלום.
+      <br>📅 <b>שינוי סכום חל מ${monthLabel(month)} ואילך.</b> חודשים קודמים שומרים את התקציב שהיה בהם, כדי ש"עמדנו בתקציב במרץ" יישאר תשובה נכונה.</p>
     <div class="bars">
-      ${S.categories.map(c=>{const u=usage(c,month),sp=spent[c.id]||0,left=(+c.budget||0)-u.sp;return `
+      ${S.categories.map(c=>{const u=usage(c,month),sp=spent[c.id]||0,left=u.b-u.sp;return `
       <div class="brow">
         <div class="line1"><span class="ic">${c.icon}</span>
           <input class="cName" data-id="${c.id}" value="${esc(c.name)}" style="max-width:165px;padding:5px 8px;font-size:13.5px;font-weight:600;background:transparent;border-color:transparent">
           <span class="amt" style="margin-inline-start:auto">${c.freq>1?`נוצל ב-${c.freq} חודשים ${money(u.sp)}`:`נוצל ${money(sp)}`} · ${left<0?`<span class="neg">חריגה ${money(-left)}</span>`:`נותר ${money(left)}`}</span>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <input class="cBud" data-id="${c.id}" type="number" min="0" step="50" value="${+c.budget||0}" style="max-width:100px;padding:6px 9px;font-size:13.5px">
+          <input class="cBud" data-id="${c.id}" type="number" min="0" step="50" value="${u.b}" style="max-width:100px;padding:6px 9px;font-size:13.5px">
           <select class="cFreq" data-id="${c.id}" style="max-width:120px;padding:6px 8px;font-size:12.5px">
             ${FREQ.map(([v,l])=>`<option value="${v}" ${(+c.freq||1)===v?'selected':''}>${l}</option>`).join('')}</select>
           <div class="track" style="flex:1"><div class="fill" style="width:${Math.min(u.pct,100)}%;background:${u.pct>100?'var(--critical)':sc(c.slot||1)}"></div></div>
           <button class="delCat" data-id="${c.id}" style="opacity:.55;background:none;border:0;font-size:15px" aria-label="מחיקה">🗑</button>
         </div>
-        ${c.freq>1?`<div style="font-size:11px;color:var(--muted);margin-top:4px">${freqLabel(c.freq)} · שווה-ערך ${money(monthlyAlloc(c))} לחודש</div>`:''}
+        ${c.freq>1?`<div style="font-size:11px;color:var(--muted);margin-top:4px">${freqLabel(c.freq)} · שווה-ערך ${money(monthlyAllocAt(c,month))} לחודש</div>`:''}
       </div>`}).join('')}
     </div>
     <div class="toolbar" style="margin:18px 0 0">
@@ -2200,7 +2296,9 @@ function viewBudget(){
 }
 function wireBudget(){
   document.querySelectorAll('.cName').forEach(e=>e.onchange=()=>{touch(catById(e.dataset.id)).name=e.value.trim()||'ללא שם';save();toast('נשמר ✓')});
-  document.querySelectorAll('.cBud').forEach(e=>e.onchange=()=>{touch(catById(e.dataset.id)).budget=+e.value||0;save();render();toast('התקציב עודכן ✓')});
+  document.querySelectorAll('.cBud').forEach(e=>e.onchange=()=>{
+    setBudgetAt(catById(e.dataset.id),month,+e.value||0);save();render();
+    toast(month===thisMonth()?'התקציב עודכן ✓':`התקציב עודכן מ${monthLabel(month)} ואילך ✓`)});
   document.querySelectorAll('.cFreq').forEach(e=>e.onchange=()=>{touch(catById(e.dataset.id)).freq=+e.value||1;save();render();toast('התדירות עודכנה ✓')});
   document.querySelectorAll('.delCat').forEach(b=>b.onclick=()=>{
     const c=Object.assign({},catById(b.dataset.id));
@@ -2686,6 +2784,7 @@ const COOKIE_ROWS=[
   ['🔐','חיבור לחשבון','שומר שאתם מחוברים כדי שלא תצטרכו להקליד סיסמה בכל פתיחה. נמחק ביציאה מהחשבון.','הכרחי'],
   ['◐','ערכת נושא','זוכר אם בחרתם מצב בהיר או כהה.','העדפה'],
   ['✉️','הזמנה ממתינה','אם הגעתם מקישור הזמנה, הוא נשמר עד להשלמת ההרשמה ואז נמחק.','הכרחי'],
+  ['📤','שינויים שממתינים לשמירה','תנועה שנרשמה בלי חיבור לאינטרנט נשמרת כאן עד שהיא מגיעה לשרת, ואז נמחקת. בלי זה היא הייתה אובדת.','הכרחי'],
 ];
 
 function cookieDetailsHtml(){
@@ -2751,6 +2850,14 @@ function wireCookieCard(){
   if(b)b.onclick=async()=>{
     if(!confirm('לנקות את האחסון המקומי ולהתנתק?\n\nהתקציב עצמו לא נמחק — הוא שמור בשרת.'))return;
     if(DIRTY.size||GONE.length)await flush();
+    /* אם השמירה נכשלה, יש כאן שינויים שקיימים רק בדפדפן הזה. ניקוי
+       עכשיו היה מוחק אותם לתמיד — אז עוצרים ואומרים את זה במפורש. */
+    if(DIRTY.size||GONE.length){
+      const n=DIRTY.size+GONE.length;
+      if(!confirm(`שימו לב: ${n} שינויים עדיין לא הגיעו לשרת.\n\n`
+        +'ניקוי האחסון עכשיו ימחק אותם לצמיתות. להמשיך בכל זאת?'))return;
+      clearOutbox();
+    }
     try{[COOKIE_KEY,THEME_KEY,INV_KEY].forEach(k=>localStorage.removeItem(k))}catch(e){}
     signOut();
     setTimeout(showCookieBar,300);
@@ -3002,10 +3109,10 @@ function applyWizard(){
     if(!S.recurring.find(r=>r.name===n))
       S.recurring.push(touch({id:uid(),name:n,amount:v,catId:c?c.id:(S.categories[0]||{}).id||null,
         memberId:m?m.id:null,day:1,active:true}));
-    if(c){touch(c);c.budget=v;c.freq=1}
+    if(c){setBudgetAlways(c,v);c.freq=1}
   });
   Object.entries(wz.budgets).forEach(([n,v])=>{
-    const c=S.categories.find(x=>x.name===n);if(c&&v>0){touch(c);c.budget=v}});
+    const c=S.categories.find(x=>x.name===n);if(c&&v>0)setBudgetAlways(c,v)});
 
   save(true);
   const n=S.recurring.filter(r=>r.active!==false).length;
@@ -3066,7 +3173,12 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&HH&&!DIRT
 
 async function reload(){
   if(!HH)return;
-  try{await loadAll();render()}catch(e){lastError=e.message;setSyncUI('err')}
+  try{
+    await loadAll();
+    /* loadAll מנקה את התור, אז מה שעדיין לא נשלח צריך לחזור אחריו */
+    if(restoreOutbox())flush();
+    render();
+  }catch(e){lastError=e.message;setSyncUI('err')}
 }
 
 /* ---------- הזמנה מהקישור ----------
