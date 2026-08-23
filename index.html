@@ -1183,6 +1183,7 @@ function toast(msg,action){
 /* window.SUPA מוגדר ב-config שמוטמע בראש הקובץ.
    בבדיקות מוזרק לקוח מזויף ב-window.__FAKE_SUPA, וכל השאר זהה. */
 let sb=null, SESSION=null, HH=null;   /* HH = המשפחה הפעילה */
+let digestOn=false;                  /* הצטרפות אישית לסיכום השבועי */
 
 /* ספריית Supabase יושבת אצלנו בשרת (supabase.js) ולא ב-CDN חיצוני:
    פחות תלות בצד שלישי, והדף לא פונה לאף מקור זר בזמן הטעינה. */
@@ -1397,7 +1398,7 @@ async function flush(){
 async function loadHousehold(){
   const me=SESSION&&SESSION.user&&SESSION.user.id;
   const {data:mine,error:e1}=await sb.from('household_members')
-    .select('household_id,display_name,role,slot,joined_at,households(id,name,onboarded,auto_fixed)')
+    .select('household_id,display_name,role,slot,joined_at,weekly_digest,households(id,name,onboarded,auto_fixed)')
     .eq('user_id',me);
   if(e1)throw e1;
   if(!mine||!mine.length){HH=null;return null}
@@ -1417,6 +1418,7 @@ async function loadHousehold(){
   HH={id:pick.household_id,name:h.name||'המשפחה שלי',onboarded:!!h.onboarded,
       autoFixed:h.auto_fixed!==false,
       role:pick.role,others:mine.length-1};
+  digestOn=!!pick.weekly_digest;
   return HH;
 }
 
@@ -2953,6 +2955,17 @@ function viewSettings(){
     <p class="sub" style="margin:4px 0 0">${S.tx.length} תנועות · ${S.categories.length} קטגוריות · ${S.recurring.length} הוראות קבע</p>
   </div>
 
+  <div class="card">
+    <h2>✉️ סיכום שבועי במייל</h2>
+    <p class="sub">פעם בשבוע, ביום ראשון בבוקר: כמה הוצאתם, אם אתם בקצב, ואיפה יש חריגה.
+      נשלח רק אם הייתה פעילות באותו שבוע.</p>
+    <label class="swrow">
+      <input type="checkbox" id="digestOn" ${digestOn?'checked':''}>
+      <span><b>שלחו לי סיכום שבועי</b><br>
+        <span class="sub">ההחלטה אישית — היא לא משפיעה על שאר בני המשפחה, ואפשר לבטל בכל רגע,
+        גם מתוך המייל עצמו. יעדי חיסכון אישיים לא מופיעים בסיכום.</span></span></label>
+  </div>
+
   ${disclosureCard()}
 
   ${cookieCard()}
@@ -2987,6 +3000,18 @@ async function healthReport(){
 
 function wireSettings(){
   wireCookieCard();
+  const dg=document.getElementById('digestOn');
+  if(dg)dg.onchange=async()=>{
+    const want=dg.checked;
+    dg.disabled=true;
+    const {error}=await sb.from('household_members')
+      .update({weekly_digest:want})
+      .eq('household_id',HH.id).eq('user_id',SESSION.user.id);
+    dg.disabled=false;
+    if(error){dg.checked=!want;toast('העדכון נכשל: '+error.message);return}
+    digestOn=want;
+    toast(want?'נרשמתם לסיכום השבועי ✓':'הוסרתם מהסיכום השבועי');
+  };
   const ho=document.getElementById('healthOut');
   if(ho)healthReport().then(L=>{
     ho.innerHTML=L.map(x=>`<div><span style="color:${x.ok?'var(--good-ink)':'var(--critical)'}">${x.ok?'✓':'✕'}</span>
@@ -3492,6 +3517,34 @@ function readInvite(){
 }
 function clearInvite(){try{localStorage.removeItem(INV_KEY)}catch(e){}}
 
+/* ---------- הסרה מהסיכום השבועי ----------
+   מגיעים לכאן מקישור במייל. חייב לעבוד גם למי שלא מחובר ולא זוכר
+   סיסמה — אחרת "הסירו אותי" הוא הבטחה ריקה. */
+async function handleUnsub(){
+  const m=(location.hash||'').match(/unsub=([0-9a-fA-F-]{36})/);
+  if(!m)return false;
+  history.replaceState(null,'',location.pathname);
+  const boo=document.getElementById('boot');
+  const done=(title,body)=>{
+    boo.classList.remove('off');
+    boo.innerHTML=`<div style="max-width:340px;text-align:center">
+      <p style="font-size:34px;margin:0 0 10px">✉️</p>
+      <p style="font-size:19px;font-weight:800;margin:0 0 8px">${title}</p>
+      <p style="margin:0 0 18px;color:var(--muted);line-height:1.7">${body}</p>
+      <a class="btn" href="${location.pathname}" style="text-decoration:none">חזרה לאתר</a>
+    </div>`;
+  };
+  try{
+    const {data,error}=await sb.rpc('unsubscribe_digest',{p_token:m[1]});
+    if(error)throw error;
+    if(data)done('הוסרתם מהסיכום השבועי','לא תקבלו יותר את המייל הזה. אפשר להפעיל אותו שוב בכל רגע מההגדרות שבאפליקציה.');
+    else done('כבר לא רשומים','הכתובת הזו כבר אינה מקבלת את הסיכום השבועי.');
+  }catch(e){
+    done('לא הצלחנו להסיר','נסו שוב מאוחר יותר, או כבו את הסיכום מתוך ההגדרות באפליקציה.');
+  }
+  return true;
+}
+
 /* ---------- ההמראה ---------- */
 async function boot(){
   const boo=document.getElementById('boot');
@@ -3512,6 +3565,9 @@ async function boot(){
   sb.auth.onAuthStateChange((ev,s)=>{
     if(ev==='PASSWORD_RECOVERY'){SESSION=s;toast('אפשר לקבוע סיסמה חדשה בהגדרות ← החשבון שלי')}
   });
+
+  /* לפני כל השאר: מי שלחץ "הסירו אותי" צריך לקבל תשובה, לא מסך כניסה */
+  if(await handleUnsub())return;
 
   boo.classList.add('off');
   showCookieBar();
