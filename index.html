@@ -552,6 +552,27 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 .newcat input.ncbud{flex:0 0 96px;min-width:0}
 .newcat .btn{padding:9px 15px;font-size:13.5px}
 
+/* ==================== פיצול תנועה ==================== */
+.splitbox{flex-direction:column;align-items:stretch;gap:9px}
+.splithead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px}
+.splitrest{margin-inline-start:auto;font-size:12.5px;font-weight:700;
+  color:var(--warning);white-space:nowrap}
+.splitrest.ok{color:var(--good-ink)}
+.splitrest.neg{color:var(--critical)}
+.splitrow{display:flex;gap:8px;align-items:center}
+.splitrow select{flex:1;min-width:0;font-size:13.5px;padding:9px 10px}
+.splitrow input{flex:0 0 96px;min-width:0;font-size:13.5px;padding:9px 10px}
+.splitrow .spDel{background:none;border:0;color:var(--muted);font-size:15px;
+  cursor:pointer;padding:4px 6px;line-height:1}
+.splitrow .spDel:hover{color:var(--critical)}
+.btn.sm{padding:7px 12px;font-size:12.5px}
+
+/* מתג הגדרה עם הסבר — לא רק תיבת סימון עירומה */
+.swrow{display:flex;gap:11px;align-items:flex-start;cursor:pointer;
+  background:var(--plane);border:1px solid var(--ring);border-radius:13px;padding:12px 14px}
+.swrow input{width:19px;height:19px;flex:0 0 auto;margin-top:1px;accent-color:var(--s1)}
+.swrow .sub{margin:3px 0 0;display:block}
+
 </style>
 </head>
 <body>
@@ -1049,6 +1070,40 @@ function who(t){
   return null;
 }
 const txOf=m=>S.tx.filter(t=>t.date.slice(0,7)===m);
+
+/* ---------- תקופות ----------
+   "כמה הוצאנו על הרכב השנה?" לא הייתה לו תשובה כל עוד כל מסך היה
+   נעול על חודש בודד. כל התנועות ממילא נטענות מהשרת, אז החישוב
+   כאן הוא מקומי ולא עולה בקשה נוספת. */
+const PERIODS=[['month','החודש המוצג'],['3','3 החודשים האחרונים'],
+  ['6','6 החודשים האחרונים'],['12','12 החודשים האחרונים'],
+  ['ytd','מתחילת השנה'],['all','כל הזמן']];
+
+function periodRange(p,m){
+  if(p==='all'){
+    const ds=S.tx.map(t=>t.date).sort();
+    return {from:ds[0]||m+'-01',to:'9999-12-31',months:0,label:'כל הזמן'};
+  }
+  if(p==='ytd'){
+    const y=m.slice(0,4);
+    return {from:y+'-01-01',to:m+'-31',months:+m.slice(5,7),
+            label:'מתחילת '+y};
+  }
+  const n=+p;
+  if(n>1){
+    const first=shiftMonth(m,-(n-1));
+    return {from:first+'-01',to:m+'-31',months:n,
+            label:n+' חודשים עד '+monthLabel(m)};
+  }
+  return {from:m+'-01',to:m+'-31',months:1,label:monthLabel(m)};
+}
+const txIn=r=>S.tx.filter(t=>t.date>=r.from&&t.date<=r.to);
+
+/* כמה חודשים באמת יש בטווח — בשביל ממוצע שלא משקר כשהטווח
+   ארוך מהנתונים שקיימים בפועל */
+function monthsWithData(list){
+  return new Set(list.map(t=>t.date.slice(0,7))).size;
+}
 const FREQ=[[1,'חודשי'],[2,'כל חודשיים'],[3,'רבעוני'],[6,'חצי שנתי'],[12,'שנתי']];
 const freqLabel=f=>(FREQ.find(x=>x[0]===(+f||1))||FREQ[0])[1];
 /* ---------- תקציב לפי חודש ----------
@@ -1262,7 +1317,7 @@ const toRow={
   transactions:o=>({id:o.id,household_id:HH.id,kind:o.type||'expense',amount:o.amount,
     occurred_on:o.date,category_id:o.catId||null,member_id:o.memberId||null,
     member_label:o.memberLabel||null,note:o.note||null,is_fixed:!!o.fixed,
-    goal_id:o.goalId||null}),
+    goal_id:o.goalId||null,split_id:o.splitId||null}),
   goals:o=>({id:o.id,household_id:HH.id,owner_id:o.ownerId||null,name:o.name,
     icon:o.icon||'🎯',target_amount:+o.target||0,target_date:o.date||null,
     archived:!!o.archived,created_by:o.createdBy||SESSION.user.id}),
@@ -1279,7 +1334,7 @@ const toRow={
 const fromRow={
   transactions:r=>({id:r.id,type:r.kind,amount:+r.amount,date:r.occurred_on,catId:r.category_id,
     memberId:r.member_id,memberLabel:r.member_label,note:r.note||'',fixed:!!r.is_fixed,
-    goalId:r.goal_id||null,mt:0}),
+    goalId:r.goal_id||null,splitId:r.split_id||null,mt:0}),
   goals:r=>({id:r.id,ownerId:r.owner_id||null,name:r.name,icon:r.icon||'🎯',
     target:+r.target_amount||0,date:r.target_date||'',archived:!!r.archived,
     createdBy:r.created_by,mt:0}),
@@ -1342,7 +1397,7 @@ async function flush(){
 async function loadHousehold(){
   const me=SESSION&&SESSION.user&&SESSION.user.id;
   const {data:mine,error:e1}=await sb.from('household_members')
-    .select('household_id,display_name,role,slot,joined_at,households(id,name,onboarded)')
+    .select('household_id,display_name,role,slot,joined_at,households(id,name,onboarded,auto_fixed)')
     .eq('user_id',me);
   if(e1)throw e1;
   if(!mine||!mine.length){HH=null;return null}
@@ -1360,6 +1415,7 @@ async function loadHousehold(){
   }
   const h=pick.households||{};
   HH={id:pick.household_id,name:h.name||'המשפחה שלי',onboarded:!!h.onboarded,
+      autoFixed:h.auto_fixed!==false,
       role:pick.role,others:mine.length-1};
   return HH;
 }
@@ -1401,6 +1457,37 @@ async function markMonthLoaded(m){
   if(S.loadedMonths.includes(m))return;
   S.loadedMonths.push(m);
   try{await sb.from('loaded_months').upsert({household_id:HH.id,month:m},{onConflict:'household_id,month'})}catch(e){}
+}
+
+/* ---------- תפיסת החודש ----------
+   שני בני משפחה שפותחים את האפליקציה באותו רגע היו יוצרים שתי טעינות
+   של אותן הוראות קבע. בדיקה בצד הלקוח לא מספיקה — היא תמיד תפסיד
+   למרוץ. לכן insert (ולא upsert) על אינדקס ייחודי: מי שהשורה שלו
+   נכנסה הוא שטוען, והשני מקבל שגיאה ופשוט לא עושה כלום. */
+async function claimMonth(m){
+  if(S.loadedMonths.includes(m))return false;
+  const {error}=await sb.from('loaded_months').insert({household_id:HH.id,month:m});
+  if(error)return false;
+  S.loadedMonths.push(m);
+  return true;
+}
+
+/* ---------- טעינה אוטומטית של הוראות קבע ----------
+   טעינה ידנית נשכחת, ואז התקציב נראה מצוין ואינו נכון. נטען רק
+   לחודש הנוכחי — לעולם לא לחודש שעבר ולא לחודש עתידי. */
+async function autoLoadFixed(){
+  if(!HH||!HH.autoFixed)return 0;
+  const m=thisMonth();
+  if(month!==m||S.loadedMonths.includes(m))return 0;
+  const act=S.recurring.filter(r=>r.active!==false);
+  if(!act.length)return 0;
+  if(!(await claimMonth(m)))return 0;
+  const made=act.map(r=>touch({id:uid(),type:'expense',amount:+r.amount,
+    date:`${m}-${String(r.day||1).padStart(2,'0')}`,catId:r.catId,
+    memberId:r.memberId,note:r.name,fixed:true}));
+  made.forEach(t=>S.tx.push(t));
+  save(true);
+  return made.length;
 }
 
 /* ==================== הקמת משפחה ==================== */
@@ -1594,6 +1681,13 @@ async function afterAuth(nameHint){
   const back=restoreOutbox();
   hideAuth();
   render();
+  /* אחרי שהמסך למעלה, לא לפניו — טעינה שקטה ברקע עם אפשרות ביטול */
+  autoLoadFixed().then(n=>{
+    if(!n)return;
+    render();
+    toast(`${n} הוצאות קבועות נטענו ל${monthLabel(thisMonth())} ✓`,
+      {label:'ביטול',fn:()=>undoAutoFixed(thisMonth())});
+  }).catch(()=>{});
   if(back){
     setSyncUI('busy');
     flush().then(okd=>{if(okd)toast(`${back} שינויים שלא נשלחו נשמרו עכשיו ✓`);render()});
@@ -1956,7 +2050,7 @@ function txList(list){
     return `<button class="titem editTx" data-id="${t.id}">
       <span class="av">${c?c.icon:'❓'}</span>
       <span class="mid"><span class="t1">${t.note?esc(t.note):(c?esc(c.name):'תנועה')}</span>
-        <span class="t2">${c&&t.note?esc(c.name)+' ·':''} ${avatar(m)} ${m?esc(m.name):'—'} · ${t.date.slice(8,10)}/${t.date.slice(5,7)}${t.fixed?' <span class="pin">קבועה</span>':''}</span></span>
+        <span class="t2">${c&&t.note?esc(c.name)+' ·':''} ${avatar(m)} ${m?esc(m.name):'—'} · ${t.date.slice(8,10)}/${t.date.slice(5,7)}${t.fixed?' <span class="pin">קבועה</span>':''}${t.splitId?' <span class="pin">חלק מפיצול</span>':''}</span></span>
       <span class="val ${t.type==='income'?'pos':''}"><bdi dir="ltr">${t.type==='income'?'+':'−'}${money(t.amount)}</bdi></span>
       <span class="chev">‹</span></button>`}).join('')}</div>`;
 }
@@ -2004,7 +2098,20 @@ function memberChart(){
 function wireTxClicks(){
   document.querySelectorAll('.editTx').forEach(b=>b.onclick=()=>{
     const t=S.tx.find(x=>x.id===b.dataset.id);
-    if(t)openSheet(Object.assign({},t,{amount:String(t.amount)}));
+    if(!t)return;
+    /* לחיצה על חלק מפיצול פותחת את הקנייה כולה, לא את הרסיס */
+    if(t.splitId){
+      const parts=S.tx.filter(x=>x.splitId===t.splitId);
+      if(parts.length>1){
+        const tot=parts.reduce((a,x)=>a+x.amount,0);
+        openSheet(Object.assign({},t,{amount:String(tot),id:null}));
+        splitOn=true;
+        splitRows=parts.map(x=>({catId:x.catId,amount:String(x.amount)}));
+        drawSheet();
+        return;
+      }
+    }
+    openSheet(Object.assign({},t,{amount:String(t.amount)}));
   });
 }
 function wireDash(){
@@ -2041,15 +2148,26 @@ let sheetOpen=false, draft=null;
 let newCatOpen=false, newCatName='', newCatBud='', newCatIcon='📌';
 function resetNewCat(){newCatOpen=false;newCatName='';newCatBud='';newCatIcon='📌'}
 
+/* ---------- פיצול תנועה ----------
+   קנייה אחת בסופר שכוללת גם חיתולים. נשמרת כמה תנועות נפרדות עם
+   מזהה משותף, ולא כתנועה אחת עם ילדים — כך כל החישובים הקיימים
+   (ניצול, קצב, מגמה, "מי הוציא") עובדים בלי לדעת שהיה כאן פיצול. */
+let splitOn=false, splitRows=[];
+function resetSplit(){splitOn=false;splitRows=[]}
+const splitSum=()=>splitRows.reduce((a,r)=>a+(+r.amount||0),0);
+function splitRest(){return (+draft.amount||0)-splitSum()}
+
 function openSheet(preset){
   /* ברירת המחדל היא אני — מי שפותח את המסך הוא בדרך כלל מי ששילם */
   draft=Object.assign({type:'expense',amount:'',catId:'',memberId:myMemberId(),
     memberLabel:null,date:todayStr(),note:''},preset||{});
-  resetNewCat();
+  resetNewCat();resetSplit();
   sheetOpen=true;
   document.getElementById('scrim').classList.add('on');
   document.getElementById('sheet').classList.add('on');
-  document.getElementById('sheetDel').classList.toggle('hide',!draft.id);
+  /* פיצול נפתח לעריכה בלי id (הוא נשמר מחדש כקבוצה), אבל עדיין
+     צריך להיות אפשר למחוק אותו */
+  document.getElementById('sheetDel').classList.toggle('hide',!(draft.id||draft.splitId));
   document.body.style.overflow='hidden';
   drawSheet();
 }
@@ -2074,7 +2192,7 @@ function drawSheet(){
       ${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}
       <button data-k="00">00</button><button data-k="0">0</button><button data-k="del">⌫</button></div>
     <div class="fieldlbl">קטגוריה</div>
-    <div class="catgrid" id="sCats">${cats.map(c=>
+    <div class="catgrid ${splitOn?'hide':''}" id="sCats">${cats.map(c=>
       `<button data-id="${c.id}" aria-pressed="${c.id===draft.catId}"><span class="ci">${c.icon}</span>${esc(c.name)}</button>`).join('')}
       <button class="catnew" data-new="1" aria-pressed="false"><span class="ci">＋</span>חדשה</button></div>
     ${newCatOpen?`<div class="newcat" id="sNewCat">
@@ -2084,6 +2202,7 @@ function drawSheet(){
       <button class="btn" id="ncAdd">הוספה</button>
       <button class="btn ghost" id="ncCancel">ביטול</button>
     </div>`:''}
+    ${splitUi()}
     <div class="fieldlbl">${draft.type==='expense'?'מי שילם':'מי קיבל'}</div>
     <div class="chipsel" id="sMem">${S.members.map(m=>
       `<button data-id="${m.id}" aria-pressed="${!draft.memberLabel&&m.id===draft.memberId}">${avatar(m)}${esc(m.name)}</button>`).join('')}
@@ -2098,9 +2217,89 @@ function drawSheet(){
     <div class="fieldlbl">תיאור (לא חובה)</div>
     <input id="sNote" value="${esc(draft.note||'')}" placeholder="למשל: קניות בשופרסל">
     ${draft.id?`<button class="linkbtn" id="sDup">📄 שכפול התנועה להיום</button>`:''}`;
-  document.getElementById('sheetSave').disabled=!(+draft.amount>0&&draft.catId);
+  document.getElementById('sheetSave').disabled=
+    !(+draft.amount>0 && (splitOn?splitReady():!!draft.catId));
   wireSheet();
 }
+function splitUi(){
+  if(draft.type!=='expense')return '';        /* פיצול הכנסה — לא תרחיש אמיתי */
+  const cats=S.categories;
+  if(!splitOn)
+    return `<button class="linkbtn" id="splitOn" style="margin:2px 0 4px">✂️ לפצל בין כמה קטגוריות</button>`;
+  const rest=splitRest();
+  return `
+  <div class="newcat splitbox" id="sSplit">
+    <div class="splithead">
+      <b>פיצול בין קטגוריות</b>
+      <span class="splitrest ${Math.abs(rest)<0.5?'ok':(rest<0?'neg':'')}">
+        ${Math.abs(rest)<0.5?'✓ מחולק במלואו'
+          :rest>0?'נותרו לחלק '+money(rest):'חורג ב-'+money(-rest)}</span>
+    </div>
+    ${splitRows.map((r,i)=>`
+      <div class="splitrow">
+        <select class="spCat" data-i="${i}">${cats.map(c=>
+          `<option value="${c.id}" ${c.id===r.catId?'selected':''}>${c.icon} ${esc(c.name)}</option>`).join('')}</select>
+        <input class="spAmt" data-i="${i}" type="number" inputmode="decimal" min="0"
+               placeholder="סכום" value="${r.amount||''}">
+        <button class="spDel" data-i="${i}" aria-label="הסרת שורה">✕</button>
+      </div>`).join('')}
+    <div class="toolbar" style="margin-top:2px">
+      <button class="btn ghost sm" id="spAdd">+ קטגוריה</button>
+      ${Math.abs(rest)>=0.5&&splitRows.length?`<button class="btn ghost sm" id="spRest">היתרה לשורה האחרונה</button>`:''}
+      <button class="btn ghost sm" id="splitOff">ביטול הפיצול</button>
+    </div>
+  </div>`;
+}
+
+function wireSplit(){
+  const on=document.getElementById('splitOn');
+  if(on)on.onclick=()=>{
+    splitOn=true;
+    /* פותחים עם שתי שורות: הראשונה היא הקטגוריה שכבר נבחרה, עם כל
+       הסכום, כדי שהמשתמש רק יוריד ממנה ולא יתחיל מאפס. */
+    const first=draft.catId||(S.categories[0]||{}).id||'';
+    const second=(S.categories.find(c=>c.id!==first)||{}).id||first;
+    splitRows=[{catId:first,amount:draft.amount||''},{catId:second,amount:''}];
+    drawSheet();
+  };
+  const box=document.getElementById('sSplit');
+  if(!box)return;
+  const off=document.getElementById('splitOff');
+  if(off)off.onclick=()=>{resetSplit();drawSheet()};
+  document.getElementById('spAdd').onclick=()=>{
+    const used=splitRows.map(r=>r.catId);
+    const next=(S.categories.find(c=>used.indexOf(c.id)<0)||S.categories[0]||{}).id||'';
+    splitRows.push({catId:next,amount:''});drawSheet();
+  };
+  const rest=document.getElementById('spRest');
+  if(rest)rest.onclick=()=>{
+    const r=splitRows[splitRows.length-1];
+    r.amount=String(Math.max(0,(+r.amount||0)+splitRest()));drawSheet();
+  };
+  box.querySelectorAll('.spCat').forEach(e=>e.onchange=()=>{
+    splitRows[+e.dataset.i].catId=e.value;drawSheet()});
+  box.querySelectorAll('.spAmt').forEach(e=>e.oninput=()=>{
+    splitRows[+e.dataset.i].amount=e.value;
+    /* לא מציירים מחדש בכל הקלדה — זה היה גונב את המיקוד מהשדה */
+    const rs=document.querySelector('.splitrest'), v=splitRest();
+    if(rs){rs.className='splitrest '+(Math.abs(v)<0.5?'ok':(v<0?'neg':''));
+      rs.textContent=Math.abs(v)<0.5?'✓ מחולק במלואו'
+        :v>0?'נותרו לחלק '+money(v):'חורג ב-'+money(-v)}
+    document.getElementById('sheetSave').disabled=!splitReady();
+  });
+  box.querySelectorAll('.spDel').forEach(e=>e.onclick=()=>{
+    splitRows.splice(+e.dataset.i,1);
+    if(splitRows.length<2&&splitRows.length)splitRows.push({catId:'',amount:''});
+    if(!splitRows.length)resetSplit();
+    drawSheet()});
+}
+
+/* פיצול תקין = לפחות שתי שורות עם סכום, והסכום מתחלק במלואו */
+function splitReady(){
+  const rows=splitRows.filter(r=>r.catId&&+r.amount>0);
+  return rows.length>=2 && Math.abs(splitRest())<0.5;
+}
+
 function wireSheet(){
   document.querySelectorAll('#sType button').forEach(b=>b.onclick=()=>{
     draft.type=b.dataset.v;draft.catId='';resetNewCat();drawSheet()});
@@ -2110,6 +2309,7 @@ function wireSheet(){
       const n=document.getElementById('ncName');if(n)n.focus();return}
     draft.catId=b.dataset.id;drawSheet()});
   wireNewCat();
+  wireSplit();
   document.querySelectorAll('#sMem button').forEach(b=>b.onclick=()=>{
     if(b.dataset.lbl==='__new'){
       const n=(prompt('שם האדם (מישהו שאין לו חשבון במערכת):')||'').trim();
@@ -2161,7 +2361,9 @@ function key(k){
   drawSheet();
 }
 function saveDraft(){
-  if(!(+draft.amount>0)||!draft.catId)return;
+  if(!(+draft.amount>0))return;
+  if(splitOn){saveSplit();return}
+  if(!draft.catId)return;
   const c=anyCat(draft.catId);
   const edited=!!draft.id, amount=+draft.amount, type=draft.type, dt=draft.date;
   if(edited){
@@ -2176,8 +2378,42 @@ function saveDraft(){
   closeSheet();render();
   toast(edited?'התנועה עודכנה ✓':`${type==='income'?'הכנסה':'הוצאה'} של ${money(amount)} נרשמה ב"${c?c.name:''}" ✓`);
 }
+/* שמירת פיצול: תנועה לכל שורה, מזהה פיצול משותף. בעריכה מוחקים
+   קודם את החלקים הישנים — אחרת עריכה הייתה מכפילה את הקנייה. */
+function saveSplit(){
+  if(!splitReady())return;
+  const sid=(draft.splitId)||uid();
+  const dt=draft.date, note=(draft.note||'').trim();
+  if(draft.splitId)S.tx.filter(t=>t.splitId===draft.splitId).map(t=>t.id)
+    .forEach(id=>removeRec('tx',id));
+  else if(draft.id)removeRec('tx',draft.id);
+  const rows=splitRows.filter(r=>r.catId&&+r.amount>0);
+  rows.forEach(r=>S.tx.push(touch({id:uid(),type:'expense',amount:+r.amount,
+    catId:r.catId,memberId:draft.memberId||null,memberLabel:draft.memberLabel||null,
+    date:dt,note,splitId:sid})));
+  save();
+  if(dt.slice(0,7)!==month)month=dt.slice(0,7);
+  closeSheet();render();
+  toast(`הקנייה פוצלה ל-${rows.length} קטגוריות ✓`);
+}
+
 function deleteDraft(){
-  if(!draft.id)return;
+  if(!draft.id&&!draft.splitId)return;
+  /* חלק מפיצול הוא לא תנועה עצמאית — מחיקה של חלק אחד הייתה
+     משאירה קנייה חצי רשומה. */
+  if(draft.splitId){
+    const parts=S.tx.filter(t=>t.splitId===draft.splitId);
+    if(parts.length>1){
+      if(!confirm(`התנועה הזו היא חלק מפיצול של ${parts.length} קטגוריות.\n\n`
+        +'למחוק את כל הפיצול?'))return;
+      const backup=parts.map(t=>Object.assign({},t));
+      backup.forEach(t=>removeRec('tx',t.id));
+      save();closeSheet();render();
+      toast('הפיצול נמחק',{label:'ביטול',fn:()=>{
+        backup.forEach(t=>undoRemove('tx',t));render()}});
+      return;
+    }
+  }
   const backup=Object.assign({},S.tx.find(t=>t.id===draft.id));
   removeRec('tx',draft.id);save();closeSheet();render();
   toast('התנועה נמחקה',{label:'ביטול',fn:()=>{undoRemove('tx',backup);render()}});
@@ -2200,7 +2436,8 @@ addEventListener('keydown',e=>{
 /* ==================== תנועות ==================== */
 function viewTx(){
   const q=txSearch.trim().toLowerCase();
-  const list=txOf(month).filter(t=>{
+  const range=periodRange(txFilter.period,month);
+  const list=txIn(range).filter(t=>{
     if(txFilter.cat&&t.catId!==txFilter.cat)return false;
     if(txFilter.member){const w=who(t);if(!w||w.id!==txFilter.member)return false}
     if(txFilter.type&&t.type!==txFilter.type)return false;
@@ -2209,29 +2446,70 @@ function viewTx(){
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date)||(b.mt||0)-(a.mt||0));
   const sum=list.reduce((a,t)=>a+(t.type==='income'?t.amount:-t.amount),0);
-  const filtered=txFilter.cat||txFilter.member||txFilter.type||q;
+  const filtered=txFilter.cat||txFilter.member||txFilter.type||q||txFilter.period!=='month';
   return `
   <div class="card">
-    <h2>📝 תנועות — ${monthLabel(month)}</h2>
+    <h2>📝 תנועות — ${esc(range.label)}</h2>
     <p class="sub">${list.length} תנועות · מאזן מוצג: <b class="${sum>=0?'pos':'neg'}">${money(Math.abs(sum))}</b> ${sum>=0?'עודף':'גירעון'}</p>
     <input id="flQ" placeholder="🔍 חיפוש בתיאור, בקטגוריה או בסכום" value="${esc(txSearch)}" style="margin-bottom:10px">
     <div class="toolbar">
+      <select id="flPeriod" style="width:auto">${PERIODS.map(([v,l])=>
+        `<option value="${v}" ${txFilter.period===v?'selected':''}>${l}</option>`).join('')}</select>
       <select id="flType" style="width:auto"><option value="">הכול</option><option value="expense" ${txFilter.type==='expense'?'selected':''}>הוצאות</option><option value="income" ${txFilter.type==='income'?'selected':''}>הכנסות</option></select>
       <select id="flCat" style="width:auto"><option value="">כל הקטגוריות</option>${S.categories.concat(S.incomeCats).map(c=>`<option value="${c.id}" ${txFilter.cat===c.id?'selected':''}>${c.icon} ${esc(c.name)}</option>`).join('')}</select>
       <select id="flMem" style="width:auto"><option value="">כולם</option>${S.members.map(m=>`<option value="${m.id}" ${txFilter.member===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}${labelList().map(n=>`<option value="lbl:${esc(n)}" ${txFilter.member==='lbl:'+n?'selected':''}>${esc(n)}</option>`).join('')}</select>
       ${filtered?`<button class="btn ghost sm" id="flClear">ניקוי ✕</button>`:''}
     </div>
+  </div>
+  ${periodSummary(list,range)}
+  <div class="card">
     ${txList(list)}
   </div>
   <button class="btn block" id="quickAdd">+ רישום תנועה חדשה</button>`;
 }
+/* סיכום התקופה — מוצג רק כשהטווח גדול מחודש, אחרת הוא חוזר על
+   מה שכבר כתוב בכותרת. */
+function periodSummary(list,range){
+  if(range.months===1)return '';
+  const exp=list.filter(t=>t.type==='expense'), inc=list.filter(t=>t.type==='income');
+  const te=exp.reduce((a,t)=>a+t.amount,0), ti=inc.reduce((a,t)=>a+t.amount,0);
+  if(!list.length)return '';
+  const nm=Math.max(1,monthsWithData(list));
+  const by={};
+  exp.forEach(t=>{const m=t.date.slice(0,7);by[m]=(by[m]||0)+t.amount});
+  const ms=Object.keys(by).sort();
+  const max=Math.max(1,...ms.map(m=>by[m]));
+  const catName=txFilter.cat?(anyCat(txFilter.cat)||{}).name:'';
+
+  return `
+  <div class="card">
+    <h2>\u{1F4C5} ${esc(range.label)}${catName?' · '+esc(catName):''}</h2>
+    <p class="sub">${nm} ${nm===1?'חודש':'חודשים'} עם תנועות</p>
+    <div class="split">
+      <div class="mini"><div class="l"><i class="dot" style="background:var(--s2)"></i>סך הוצאות</div>
+        <div class="v">${money(te)}</div></div>
+      <div class="mini"><div class="l"><i class="dot" style="background:var(--s3)"></i>ממוצע לחודש</div>
+        <div class="v">${money(te/nm)}</div></div>
+      <div class="mini"><div class="l"><i class="dot" style="background:var(--s1)"></i>סך הכנסות</div>
+        <div class="v">${money(ti)}</div></div>
+    </div>
+    ${ms.length>1?`<div class="bars" style="margin-top:14px">${ms.map(m=>`
+      <div class="brow">
+        <div class="line1"><span class="nm">${monthLabel(m)}</span>
+          <span class="amt" style="margin-inline-start:auto">${money(by[m])}</span></div>
+        <div class="track"><div class="fill" style="width:${(by[m]/max*100).toFixed(1)}%;background:var(--s2)"></div></div>
+      </div>`).join('')}</div>`:''}
+  </div>`;
+}
+
 function wireTx(){
   const f=(id,k)=>{const e=document.getElementById(id);if(e)e.onchange=()=>{txFilter[k]=e.value;render()}};
-  f('flType','type');f('flCat','cat');f('flMem','member');
+  f('flType','type');f('flCat','cat');f('flMem','member');f('flPeriod','period');
   const q=document.getElementById('flQ');
   q.oninput=()=>{const p=q.selectionStart;txSearch=q.value;render();
     const n=document.getElementById('flQ');n.focus();n.setSelectionRange(p,p)};
-  const c=document.getElementById('flClear');if(c)c.onclick=()=>{txFilter={cat:'',member:'',type:''};txSearch='';render()};
+  const c=document.getElementById('flClear');if(c)c.onclick=()=>{
+    txFilter={cat:'',member:'',type:'',period:'month'};txSearch='';render()};
   document.getElementById('quickAdd').onclick=()=>openSheet();
   wireTxClicks();
 }
@@ -2327,6 +2605,11 @@ function viewFixed(){
     <p class="sub">${act.length} הוראות קבע · ${money(tot)} בחודש</p>
     <button class="btn block ${loaded?'ghost':''}" id="loadFixed" ${act.length?'':'disabled'}>
       ${loaded?`✓ כבר נטענו ל${monthLabel(month)} — טעינה נוספת`:`טעינת הקבועות ל${monthLabel(month)}`}</button>
+    <label class="swrow" style="margin-top:12px">
+      <input type="checkbox" id="autoFix" ${HH&&HH.autoFixed?'checked':''}>
+      <span><b>טעינה אוטומטית בכל חודש חדש</b><br>
+        <span class="sub">בפתיחה הראשונה של חודש חדש הקבועות ייטענו לבד, ותקבלו הודעה עם אפשרות ביטול.
+        ההגדרה משותפת לכל בני המשפחה.</span></span></label>
     ${S.recurring.length?`<div class="tlist" style="margin-top:14px">${S.recurring.map(r=>{
       const c=catById(r.catId),m=memById(r.memberId);
       return `<div class="titem" style="${r.active===false?'opacity:.45':''}">
@@ -2350,7 +2633,24 @@ function viewFixed(){
     </div>
   </div>`;
 }
+/* ביטול הטעינה האוטומטית: מוחקים את מה שנוצר ומשחררים את החודש,
+   כדי שהמשתמש יוכל לטעון שוב ידנית אם ירצה. */
+function undoAutoFixed(m){
+  const made=S.tx.filter(t=>t.fixed&&t.date.slice(0,7)===m);
+  made.map(t=>t.id).forEach(id=>removeRec('tx',id));
+  S.loadedMonths=S.loadedMonths.filter(x=>x!==m);
+  sb.from('loaded_months').delete().eq('household_id',HH.id).eq('month',m).then(()=>{},()=>{});
+  save(true);render();
+  toast('הטעינה בוטלה');
+}
+
 function wireFixed(){
+  const af=document.getElementById('autoFix');
+  if(af)af.onchange=async()=>{
+    HH.autoFixed=af.checked;
+    try{await sb.from('households').update({auto_fixed:af.checked}).eq('id',HH.id)}catch(e){}
+    toast(af.checked?'טעינה אוטומטית פעילה ✓':'טעינה אוטומטית כבויה');
+  };
   document.getElementById('addRec').onclick=()=>{
     const n=document.getElementById('rName').value.trim(),a=+document.getElementById('rAmt').value;
     if(!n||!a){toast('נא למלא שם וסכום');return}
@@ -3124,7 +3424,7 @@ function applyWizard(){
 /* מצב חשבון עולמי: month/tab/... מוגדרים כאן כי הם משותפים לכל המסכים */
 let month=new Date().toISOString().slice(0,7);
 let tab='dash', showAllCats=false, alertsOpen=false, txSearch='';
-let txFilter={cat:'',member:'',type:''};
+let txFilter={cat:'',member:'',type:'',period:'month'};
 
 /* ---------- התקנה כאפליקציה ---------- */
 const STANDALONE=(matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
