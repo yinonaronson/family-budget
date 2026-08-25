@@ -70,13 +70,14 @@ nav.tabs button[aria-selected="true"]{color:var(--s1);border-bottom-color:var(--
 nav.mobnav{display:none}
 @media(max-width:719px){
   nav.tabs{display:none}
-  nav.mobnav{display:grid;grid-template-columns:repeat(6,1fr);position:fixed;inset-inline:0;bottom:0;z-index:45;
+  /* auto-fit ולא מספר קבוע: כל טאב חדש נכנס בלי לשבור את השורה */
+  nav.mobnav{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));position:fixed;inset-inline:0;bottom:0;z-index:45;
     background:var(--surface-1);border-top:1px solid var(--ring);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
   nav.mobnav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;
     padding:6px 2px;border-radius:11px;color:var(--muted);font-size:10.5px;font-weight:600}
   nav.mobnav button .ni{font-size:18px;line-height:1}
-  @media(max-width:400px){nav.mobnav button{font-size:9.5px;padding:7px 0}
-    nav.mobnav button .ni{font-size:17px}}
+  @media(max-width:400px){nav.mobnav button{font-size:9px;padding:7px 0;gap:2px}
+    nav.mobnav button .ni{font-size:16px}}
   nav.mobnav button[aria-selected="true"]{color:var(--s1);background:color-mix(in srgb,var(--s1) 9%,transparent)}
   .wrap{padding:12px 13px 150px}
   .top-in{padding:9px 13px}
@@ -633,6 +634,43 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 .xfernote{background:color-mix(in srgb,var(--s5) 11%,transparent);
   border-radius:11px;padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.65}
 .titem .val.xfer{color:var(--s5)}
+
+/* ==================== נכסים ==================== */
+
+/* .big היה מוגדר רק בתוך .hero, ולכן המספר הגדול בכרטיס העו"ש
+   נראה כמו טקסט רגיל. כאן הוא מקבל את מה שהתכוונו לו מלכתחילה. */
+.card>.big{font-size:33px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+@media(max-width:719px){.card>.big{font-size:28px}}
+
+.astlist{display:flex;flex-direction:column;gap:8px}
+
+.astrow{display:flex;align-items:center;gap:10px;background:var(--plane);
+  border:1px solid var(--ring);border-radius:12px;padding:11px 13px}
+
+.astmain{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.astic{font-size:21px;line-height:1;flex:none}
+.astname{min-width:0}
+.astname b{display:block;font-size:14px;font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* .sub מקבל margin-bottom מהכרטיס — כאן הוא שורת משנה, לא פסקה */
+.astname .sub{display:block;margin:1px 0 0;font-size:11.5px;color:var(--muted)}
+
+.astval{text-align:end;flex:none;line-height:1.35}
+.astval b{display:block;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.astval b.muted{font-size:12.5px;font-weight:600;color:var(--muted)}
+.astval span{display:block;font-size:11.5px;font-weight:600}
+
+.astact{display:flex;gap:2px;flex:none}
+.astact .linkbtn{padding:6px 5px;font-size:14px;color:var(--muted)}
+.astact .linkbtn:hover{color:var(--text-primary)}
+
+/* במסך צר הפעולות יורדות לשורה שנייה במקום לדחוס את השם לאות אחת */
+@media(max-width:440px){
+  .astrow{flex-wrap:wrap;row-gap:6px}
+  .astmain{flex:1 1 100%}
+  .astval{flex:1;text-align:start}
+  .astval b,.astval span{display:inline-block;margin-inline-end:8px}
+}
 
 </style>
 </head>
@@ -1271,6 +1309,60 @@ function forecast(){
           end: bal - laterOut + laterIn + incLeft - varLeft};
 }
 
+/* ==================== נכסים ====================
+   העו"ש עונה על "כמה כסף יש לי". הנכסים עונים על "כמה אני שווה".
+   שני הסוגים מחושבים אחרת בכוונה:
+
+     stock   — כמות × מחיר בשוק. הכמות היא ידע שלכם, המחיר הוא ידע
+               של השוק, ובלי מחיר אין שווי — מחזירים null ולא אפס.
+     holding — שווי הבסיס שהזנתם, ועליו כל ההעברות שנרשמו אחרי
+               תאריך הבסיס. אותה תבנית כמו יתרת הפתיחה של העו"ש,
+               ולכן עריכה או מחיקה של העברה מתקנת את עצמה. */
+
+const FX_KEY='hakis-fx';
+let FX={ILS:1};
+/* שערי מטבע הם מידע ציבורי, לא נתונים שלכם — ולכן מותר להם לשבת
+   בדפדפן. הם נשמרים רק כדי שאחרי טעינה מחדש יהיה במה להמיר עד
+   שהרענון הראשון חוזר. */
+function loadFX(){
+  try{const s=JSON.parse(localStorage.getItem(FX_KEY)||'null');
+    if(s&&s.fx&&s.fx.ILS)FX=s.fx}catch(e){}
+  return FX;
+}
+function saveFX(fx){
+  FX=Object.assign({ILS:1},fx||{});
+  try{localStorage.setItem(FX_KEY,JSON.stringify({fx:FX,at:now()}))}catch(e){}
+}
+
+/* כמה כסף נרשם באפליקציה כהעברה אל הנכס הזה */
+function assetDeposits(a,after){
+  return S.tx.reduce((s,t)=>(t.type==='transfer'&&t.assetId===a.id&&
+    (!after||t.date>after))?s+t.amount:s,0);
+}
+function assetValue(a){
+  if(!a)return null;
+  if(a.kind==='stock'){
+    if(a.lastPrice==null)return null;
+    const r=FX[a.lastCcy||'ILS'];
+    if(!r)return null;                       /* בלי שער אין שקלים */
+    return (+a.qty||0)*(+a.lastPrice)*r;
+  }
+  return (+a.valueBase||0)+assetDeposits(a,a.valueDate);
+}
+/* כמה כסף הוכנס בסך הכול. 0 פירושו "לא נאמר לנו", ואז לא מציגים
+   תשואה — עדיף בלי מספר מאשר עם מספר שממציא רווח. */
+function assetCost(a){return (+a.costBase||0)+assetDeposits(a,'')}
+function assetsTotal(){
+  return S.assets.reduce((s,a)=>{const v=assetValue(a);return v==null?s:s+v},0);
+}
+const assetsUnpriced=()=>S.assets.filter(a=>assetValue(a)===null);
+/* שווי נטו: הכסף הנזיל ועוד מה שמושקע. מוצג רק כשיש יתרת פתיחה,
+   כי בלעדיה חצי מהמשוואה אינו מספר אמיתי. */
+function netWorth(){
+  if(!hasOpening())return null;
+  return balanceNow()+assetsTotal();
+}
+
 /* מה שההתראה בודקת. מוצג רק בחודש הנוכחי — אין טעם להתריע על עבר. */
 function cashAlerts(m){
   const out=[];
@@ -1349,7 +1441,7 @@ const now=()=>Date.now();
 
 function emptyState(){
   return {categories:[],incomeCats:[],transferCats:[],members:[],tx:[],recurring:[],
-          goals:[],deposits:[],loadedMonths:[],onboarded:false};
+          goals:[],deposits:[],assets:[],loadedMonths:[],onboarded:false};
 }
 let S=emptyState();
 
@@ -1361,7 +1453,8 @@ let flushTimer=null, flushing=false, lastError=null;
 const COLLS=[['tx','transactions'],['categories','categories'],
              ['incomeCats','categories'],['transferCats','categories'],
              ['members','household_members'],
-             ['recurring','recurring'],['goals','goals'],['deposits','goal_deposits']];
+             ['recurring','recurring'],['goals','goals'],['deposits','goal_deposits'],
+             ['assets','assets']];
 function collOf(o){
   for(const [k,t] of COLLS) if(S[k].indexOf(o)>=0) return {coll:k,table:t};
   return null;
@@ -1463,7 +1556,14 @@ const toRow={
   transactions:o=>({id:o.id,household_id:HH.id,kind:o.type||'expense',amount:o.amount,
     occurred_on:o.date,category_id:o.catId||null,member_id:o.memberId||null,
     member_label:o.memberLabel||null,note:o.note||null,is_fixed:!!o.fixed,
-    goal_id:o.goalId||null,split_id:o.splitId||null}),
+    goal_id:o.goalId||null,split_id:o.splitId||null,asset_id:o.assetId||null}),
+  assets:o=>({id:o.id,household_id:HH.id,kind:o.kind==='stock'?'stock':'holding',
+    name:o.name,icon:o.icon||'📈',symbol:o.symbol||null,qty:+o.qty||0,
+    last_price:o.lastPrice==null?null:+o.lastPrice,last_ccy:o.lastCcy||null,
+    last_price_at:o.lastPriceAt||null,
+    value_base:+o.valueBase||0,value_date:o.valueDate||null,
+    cost_base:+o.costBase||0,slot:+o.slot||1,note:o.note||null,archived:!!o.archived,
+    created_by:o.createdBy||(SESSION&&SESSION.user&&SESSION.user.id)||null}),
   goals:o=>({id:o.id,household_id:HH.id,owner_id:o.ownerId||null,name:o.name,
     icon:o.icon||'🎯',target_amount:+o.target||0,target_date:o.date||null,
     archived:!!o.archived,created_by:o.createdBy||SESSION.user.id}),
@@ -1482,7 +1582,13 @@ const toRow={
 const fromRow={
   transactions:r=>({id:r.id,type:r.kind,amount:+r.amount,date:r.occurred_on,catId:r.category_id,
     memberId:r.member_id,memberLabel:r.member_label,note:r.note||'',fixed:!!r.is_fixed,
-    goalId:r.goal_id||null,splitId:r.split_id||null,mt:0}),
+    goalId:r.goal_id||null,splitId:r.split_id||null,assetId:r.asset_id||null,mt:0}),
+  assets:r=>({id:r.id,kind:r.kind==='stock'?'stock':'holding',name:r.name,
+    icon:r.icon||'📈',symbol:r.symbol||'',qty:+r.qty||0,
+    lastPrice:r.last_price==null?null:+r.last_price,lastCcy:r.last_ccy||'',
+    lastPriceAt:r.last_price_at||'',
+    valueBase:+r.value_base||0,valueDate:r.value_date||'',costBase:+r.cost_base||0,
+    slot:+r.slot||1,note:r.note||'',archived:!!r.archived,createdBy:r.created_by,mt:0}),
   goals:r=>({id:r.id,ownerId:r.owner_id||null,name:r.name,icon:r.icon||'🎯',
     target:+r.target_amount||0,date:r.target_date||'',archived:!!r.archived,
     createdBy:r.created_by,mt:0}),
@@ -1575,7 +1681,7 @@ async function loadHousehold(){
 
 async function loadAll(){
   if(!HH)return;
-  const [cats,txs,recs,mems,months,gls,deps]=await Promise.all([
+  const [cats,txs,recs,mems,months,gls,deps,ast]=await Promise.all([
     sb.from('categories').select('*').eq('household_id',HH.id).eq('archived',false),
     sb.from('transactions').select('*').eq('household_id',HH.id).order('occurred_on',{ascending:false}),
     sb.from('recurring').select('*').eq('household_id',HH.id),
@@ -1583,6 +1689,7 @@ async function loadAll(){
     sb.from('loaded_months').select('month').eq('household_id',HH.id),
     sb.from('goals').select('*').eq('household_id',HH.id).eq('archived',false),
     sb.from('goal_deposits').select('*').eq('household_id',HH.id),
+    sb.from('assets').select('*').eq('household_id',HH.id).eq('archived',false),
   ]);
   for(const r of [cats,txs,recs,mems,months]) if(r.error) throw r.error;
   const all=(cats.data||[]).map(fromRow.category);
@@ -1595,6 +1702,10 @@ async function loadAll(){
   /* היעדים עדיין עלולים להיות חסרים אם עדכון 3 לא רץ — לא מפילים את הטעינה */
   S.goals    = (gls&&!gls.error) ? (gls.data||[]).map(fromRow.goals) : [];
   S.deposits = (deps&&!deps.error)? (deps.data||[]).map(fromRow.goal_deposits) : [];
+  /* אותו כלל כמו ביעדים: אם עדכון 9 עוד לא רץ, המסך פשוט ריק
+     ולא מפיל את כל הטעינה. */
+  S.assets   = (ast&&!ast.error) ? (ast.data||[]).map(fromRow.assets)
+                                     .sort((a,b)=>a.slot-b.slot) : [];
   S.loadedMonths=(months.data||[]).map(r=>r.month);
   S.onboarded  = !!(HH&&HH.onboarded);
   DIRTY.clear();GONE.length=0;
@@ -1834,6 +1945,7 @@ async function afterAuth(nameHint){
     return;
   }
   await loadAll();
+  loadFX();          /* שערים מהפעם הקודמת, כדי שיהיה במה להמיר מיד */
   /* מה שנרשם בלי קליטה ולא הספיק להגיע לשרת חוזר עכשיו — לפני שהמסך
      מצויר, כדי שהמשתמש לא יראה לרגע שהתנועה שלו נעלמה. */
   const back=restoreOutbox();
@@ -2055,7 +2167,8 @@ function drawEmoji(q){
 
 /* ==================== ניווט ==================== */
 const NAV=[['dash','📊','דשבורד'],['tx','📝','תנועות'],['budget','🎯','תקציב'],
-  ['fixed','🔁','קבועות'],['goals','🏖️','יעדים'],['settings','⚙️','הגדרות']];
+  ['fixed','🔁','קבועות'],['goals','🏖️','יעדים'],['assets','💼','נכסים'],
+  ['settings','⚙️','הגדרות']];
 function renderNav(){
   document.getElementById('tabs').innerHTML=NAV.map(([k,i,l])=>`<button data-tab="${k}" aria-selected="${k===tab}"><span>${i}</span>${l}</button>`).join('');
   document.getElementById('mobnav').innerHTML=NAV.map(([k,i,l])=>`<button data-tab="${k}" aria-selected="${k===tab}"><span class="ni">${i}</span>${l}</button>`).join('');
@@ -2068,10 +2181,12 @@ function render(){
     ?`${esc(HH.name)} · הנתונים שמורים בשרת ומסונכרנים בין כל המכשירים`
     :'';
   document.getElementById('view').innerHTML=({dash:viewDash,tx:viewTx,budget:viewBudget,
-    fixed:viewFixed,goals:viewGoals,settings:viewSettings})[tab]();
+    fixed:viewFixed,goals:viewGoals,assets:viewAssets,settings:viewSettings})[tab]();
   ({dash:wireDash,tx:wireTx,budget:wireBudget,fixed:wireFixed,
-    goals:wireGoals,settings:wireSettings})[tab]();
+    goals:wireGoals,assets:wireAssets,settings:wireSettings})[tab]();
   wireEmoji();
+  /* המחירים מתרעננים ברקע. הציור לא מחכה להם — יש כבר מה להראות. */
+  if(tab==='assets'||tab==='dash')refreshQuotes(false);
 }
 
 /* ==================== דשבורד ==================== */
@@ -2198,7 +2313,7 @@ function cashCard(){
     <button class="btn ghost" id="goOpening">הזנת יתרת פתיחה</button>
   </div>`;
 
-  const bal=balanceNow(), f=forecast();
+  const bal=balanceNow(), f=forecast(), nw=netWorth();
   const t=totals(month);
   const col=bal<0?'var(--critical)':'var(--good-ink)';
   return `
@@ -2213,10 +2328,16 @@ function cashCard(){
       <br><span style="font-size:12px">מניח שיירדו עוד ${money(f.laterOut)} שכבר רשומים,
       שההוצאה המשתנה תימשך באותו קצב (${money(f.varLeft)})${f.incLeft>0
         ?`, ושתיכנס עוד הכנסה של ${money(f.incLeft)} לפי החודשים הקודמים`:''}.</span></p>`:''}
-    ${t.transfer?`<div class="split" style="margin-top:14px">
-      <div class="mini"><div class="l"><i class="dot" style="background:var(--s5)"></i>הועבר לחיסכון החודש</div>
-        <div class="v">${money(t.transfer)}</div></div>
+    ${t.transfer||S.assets.length?`<div class="split" style="margin-top:14px">
+      ${t.transfer?`<div class="mini"><div class="l"><i class="dot" style="background:var(--s5)"></i>הועבר לחיסכון החודש</div>
+        <div class="v">${money(t.transfer)}</div></div>`:''}
+      ${S.assets.length?`<div class="mini"><div class="l"><i class="dot" style="background:var(--s3)"></i>נכסים</div>
+        <div class="v">${money(assetsTotal())}</div></div>`:''}
     </div>`:''}
+    ${S.assets.length&&nw!=null?`<p class="sub" style="margin:12px 0 0">
+      שווי נטו — עו"ש ועוד נכסים: <b>${money(nw)}</b>${
+        assetsUnpriced().length?` <span style="color:var(--warning)">(${assetsUnpriced().length} נכסים בלי מחיר עדכני אינם נספרים)</span>`:''}
+      · <button class="linkbtn" id="goAssets">למסך הנכסים ←</button></p>`:''}
   </div>`;
 }
 
@@ -2329,6 +2450,8 @@ function wireDash(){
   /* לא לקרוא למשתנה go — הוא היה מסתיר את פונקציית הניווט הגלובלית */
   const ob=document.getElementById('goOpening');
   if(ob)ob.onclick=()=>go('settings');
+  const ga=document.getElementById('goAssets');
+  if(ga)ga.onclick=()=>go('assets');
   const at=document.getElementById('alertToggle');if(at)at.onclick=()=>{alertsOpen=!alertsOpen;render()};
   const tc=document.getElementById('toggleCats');if(tc)tc.onclick=()=>{showAllCats=!showAllCats;render()};
   const al=document.getElementById('allTx');if(al)al.onclick=()=>go('tx');
@@ -2374,7 +2497,7 @@ function splitRest(){return (+draft.amount||0)-splitSum()}
 function openSheet(preset){
   /* ברירת המחדל היא אני — מי שפותח את המסך הוא בדרך כלל מי ששילם */
   draft=Object.assign({type:'expense',amount:'',catId:'',memberId:myMemberId(),
-    memberLabel:null,date:todayStr(),note:''},preset||{});
+    memberLabel:null,date:todayStr(),note:'',assetId:null},preset||{});
   resetNewCat();resetSplit();
   sheetOpen=true;
   document.getElementById('scrim').classList.add('on');
@@ -2420,6 +2543,12 @@ function drawSheet(){
       ${draft.type==='expense'?`<input id="ncBud" class="ncbud" type="number" inputmode="decimal" placeholder="תקציב" value="${newCatBud||''}">`:''}
       <button class="btn" id="ncAdd">הוספה</button>
       <button class="btn ghost" id="ncCancel">ביטול</button>
+    </div>`:''}
+    ${draft.type==='transfer'&&S.assets.length?`
+    <div class="fieldlbl">לאיזה נכס (לא חובה)</div>
+    <div class="chipsel" id="sAsset">
+      <button data-a="" aria-pressed="${!draft.assetId}">ללא</button>
+      ${S.assets.map(a=>`<button data-a="${a.id}" aria-pressed="${draft.assetId===a.id}">${a.icon} ${esc(a.name)}</button>`).join('')}
     </div>`:''}
     ${splitUi()}
     <div class="fieldlbl">${draft.type==='expense'?'מי שילם'
@@ -2522,7 +2651,13 @@ function splitReady(){
 
 function wireSheet(){
   document.querySelectorAll('#sType button').forEach(b=>b.onclick=()=>{
-    draft.type=b.dataset.v;draft.catId='';resetNewCat();drawSheet()});
+    /* קישור לנכס הוא מושג של העברה בלבד. מעבר לסוג אחר חייב לנקות
+       אותו, אחרת הוצאה תישאר קשורה לחיסכון בלי שאיש רואה. */
+    draft.type=b.dataset.v;draft.catId='';
+    if(draft.type!=='transfer')draft.assetId=null;
+    resetNewCat();drawSheet()});
+  document.querySelectorAll('#sAsset button').forEach(b=>b.onclick=()=>{
+    draft.assetId=b.dataset.a||null;drawSheet()});
   document.querySelectorAll('#pad button').forEach(b=>b.onclick=()=>key(b.dataset.k));
   document.querySelectorAll('#sCats button').forEach(b=>b.onclick=()=>{
     if(b.dataset.new){newCatOpen=true;drawSheet();
@@ -2586,17 +2721,21 @@ function saveDraft(){
   if(!draft.catId)return;
   const c=anyCat(draft.catId);
   const edited=!!draft.id, amount=+draft.amount, type=draft.type, dt=draft.date;
+  const aid=type==='transfer'?(draft.assetId||null):null;
   if(edited){
     const t=S.tx.find(x=>x.id===draft.id);
     Object.assign(t,{type,amount,catId:draft.catId,memberId:draft.memberId||null,
-      memberLabel:draft.memberLabel||null,date:dt,note:(draft.note||'').trim()});
+      memberLabel:draft.memberLabel||null,date:dt,note:(draft.note||'').trim(),assetId:aid});
     touch(t);
   } else S.tx.push(touch({id:uid(),type,amount,catId:draft.catId,memberId:draft.memberId||null,
-    memberLabel:draft.memberLabel||null,date:dt,note:(draft.note||'').trim()}));
+    memberLabel:draft.memberLabel||null,date:dt,note:(draft.note||'').trim(),assetId:aid}));
   save();
   if(dt.slice(0,7)!==month)month=dt.slice(0,7);
   closeSheet();render();
-  toast(edited?'התנועה עודכנה ✓':`${type==='income'?'הכנסה':'הוצאה'} של ${money(amount)} נרשמה ב"${c?c.name:''}" ✓`);
+  const asset=aid&&S.assets.find(a=>a.id===aid);
+  toast(edited?'התנועה עודכנה ✓'
+    :type==='transfer'?`הועברו ${money(amount)}${asset?` אל "${asset.name}"`:''} ✓`
+    :`${type==='income'?'הכנסה':'הוצאה'} של ${money(amount)} נרשמה ב"${c?c.name:''}" ✓`);
 }
 /* שמירת פיצול: תנועה לכל שורה, מזהה פיצול משותף. בעריכה מוחקים
    קודם את החלקים הישנים — אחרת עריכה הייתה מכפילה את הקנייה. */
@@ -3114,6 +3253,287 @@ function wireGoals(){
     removeRec('goals',g.id);
     save(true);render();toast('היעד נמחק');
   });
+}
+
+/* ==================== נכסים ====================
+   מסך אחד שעונה על "כמה אני שווה". שני סוגים, כי הם באמת שונים:
+   מניה שאתם מחזיקים בכמות ידועה ומחיר לא ידוע, מול חיסכון שהשווי
+   שלו הוא מספר שאתם מעתיקים מהאתר של הגוף המנהל.
+
+   כל מה שקשור למחירים בנוי סביב הנחה אחת: הספק ייפול מתישהו.
+   לכן המחיר האחרון נשמר בשרת, ומה שמוצג כשאין רענון הוא מספר עם
+   תאריך — לא מקף, ולא מספר שמעמיד פנים שהוא עדכני. */
+
+const QUOTE_TTL=10*60*1000;        /* מחירים מתעכבים ממילא */
+const QUOTE_TIMEOUT=25000;
+let quoteAt=0, quoteBusy=false, quoteErr='', quoteAbort=null, quoteRun=0;
+let astEdit=null, astType='stock', astErr='';
+
+const stockAssets=()=>S.assets.filter(a=>a.kind==='stock'&&a.symbol);
+const priceAge=()=>{
+  const ts=S.assets.map(a=>a.lastPriceAt).filter(Boolean).sort();
+  return ts.length?ts[ts.length-1]:'';
+};
+
+async function refreshQuotes(force){
+  const syms=[];
+  stockAssets().forEach(a=>{const s=a.symbol.trim().toUpperCase();
+    if(s&&syms.indexOf(s)<0)syms.push(s)});
+  if(!syms.length){quoteErr='';return false}
+  if(quoteBusy)return false;
+  if(!force&&quoteAt&&now()-quoteAt<QUOTE_TTL)return false;
+
+  const my=++quoteRun;
+  quoteBusy=true;quoteErr='';
+  if(tab==='assets')drawAssets();
+  quoteAbort=('AbortController' in window)?new AbortController():null;
+  const timer=setTimeout(()=>{if(quoteAbort)quoteAbort.abort()},QUOTE_TIMEOUT);
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const token=session&&session.access_token;
+    if(!token)throw new Error('unauthorized');
+    const r=await fetch(SUPA.url+'/functions/v1/quotes',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({symbols:syms}),
+      signal:quoteAbort?quoteAbort.signal:undefined,
+    });
+    if(r.status===404)throw new Error('not_deployed');
+    const j=await r.json();
+    if(!r.ok||!j||!j.quotes)throw new Error((j&&j.error)||('http_'+r.status));
+    saveFX(j.fx);
+    let changed=0;
+    stockAssets().forEach(a=>{
+      const q=j.quotes[a.symbol.trim().toUpperCase()];
+      if(!q)return;
+      a.lastPrice=+q.price;a.lastCcy=q.ccy||'USD';a.lastPriceAt=j.at||new Date().toISOString();
+      touch(a);changed++;
+    });
+    if(changed)save();
+    quoteAt=now();
+    /* סימול שהספק לא מכיר הוא לרוב שגיאת הקלדה, ואם לא נאמר את זה
+       הנכס פשוט יישב שם בלי שווי בלי שאיש יבין למה. */
+    const miss=(j.missing||[]).filter(s=>syms.indexOf(s)>=0);
+    quoteErr=miss.length?'missing:'+miss.join(', '):'';
+  }catch(e){
+    quoteErr=(e&&e.name==='AbortError')?'timeout'
+            :(e&&e.message==='unauthorized')?'unauthorized'
+            :(e&&e.message==='not_deployed')?'not_deployed':'net';
+  }
+  clearTimeout(timer);
+  if(my!==quoteRun)return false;
+  quoteAbort=null;quoteBusy=false;
+  if(tab==='assets')drawAssets();
+  return true;
+}
+
+const QMSG={
+  timeout:'לקח יותר מדי זמן לקבל מחירים',
+  unauthorized:'צריך להתחבר מחדש כדי לקבל מחירים',
+  not_deployed:'שירות המחירים אינו זמין כרגע',
+  net:'לא הצלחנו להתחבר לשירות המחירים',
+};
+
+/* ---------- הצגה ---------- */
+/* מחיר יחידה אינו סכום בארנק: 309.93 שמעוגל ל-310 גורם למשתמש
+   לחשב שוב ולקבל מספר אחר משלנו. שתי ספרות, תמיד. */
+const pf=new Intl.NumberFormat('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2});
+function fmtPrice(a){
+  if(a.lastPrice==null)return '';
+  const sym=a.lastCcy==='USD'?'$':a.lastCcy==='EUR'?'€':a.lastCcy==='GBP'?'£':'₪';
+  return sym+pf.format(a.lastPrice);
+}
+function priceStamp(){
+  const t=priceAge();
+  if(!t)return '';
+  const d=new Date(t);
+  if(isNaN(d))return '';
+  const pad=n=>(n<10?'0':'')+n;
+  const same=d.toDateString()===new Date().toDateString();
+  return (same?'':`${pad(d.getDate())}/${pad(d.getMonth()+1)} `)+
+    `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function assetRow(a){
+  const v=assetValue(a), cost=assetCost(a);
+  const gain=(v!=null&&cost>0)?v-cost:null;
+  const pct=(gain!=null&&cost>0)?gain/cost*100:null;
+  const dep=assetDeposits(a,'');
+  return `<div class="astrow" data-id="${a.id}">
+    <div class="astmain">
+      <span class="astic">${a.icon}</span>
+      <div class="astname">
+        <b>${esc(a.name)}</b>
+        <span class="sub">${a.kind==='stock'
+          ? `${esc(a.symbol||'')} · ${nf.format(a.qty)} יח׳${a.lastPrice!=null?` × ${fmtPrice(a)}`:''}`
+          : (a.valueDate?`נכון ל-${a.valueDate.slice(8,10)}/${a.valueDate.slice(5,7)}`:'שווי שהוזן')}
+          ${dep?` · הופקדו כאן ${money(dep)}`:''}</span>
+      </div>
+    </div>
+    <div class="astval">
+      <b class="${v==null?'muted':''}">${v==null?'אין מחיר':money(v)}</b>
+      ${gain!=null?`<span class="${gain>=0?'pos':'neg'}">${gain>=0?'▲':'▼'} ${money(Math.abs(gain))} (${pct>=0?'+':'−'}${Math.abs(pct).toFixed(1)}%)</span>`:''}
+    </div>
+    <div class="astact">
+      <button class="linkbtn astEdit" data-id="${a.id}">✎</button>
+      <button class="linkbtn astDel" data-id="${a.id}">✕</button>
+    </div>
+  </div>`;
+}
+
+function assetForm(a){
+  const isNew=!a;
+  const k=isNew?astType:a.kind;
+  const ic=(a&&a.icon)||(k==='stock'?'📈':'🐷');
+  return `<div class="card" id="astForm">
+    <h2>${isNew?'הוספת נכס':'עריכת '+esc(a.name)}</h2>
+    ${isNew?`<div class="seg" id="astKind" style="margin-bottom:14px">
+      <button data-v="stock" aria-pressed="${k==='stock'}">📈 מניה או קרן סחירה</button>
+      <button data-v="holding" aria-pressed="${k==='holding'}">🐷 חיסכון או פיקדון</button></div>`:''}
+    <p class="sub">${k==='stock'
+      ? 'אתם מזינים כמה יחידות יש לכם, והמערכת מושכת את המחיר מהשוק. סימול כמו AAPL, VOO, או TEVA.TA לנייר בתל אביב.'
+      : 'אתם מזינים את הסכום שמופיע אצל הגוף המנהל ואת התאריך שאליו הוא נכון. העברות שתרשמו אחרי התאריך הזה יתווספו אליו לבד.'}</p>
+    <div class="toolbar" style="margin-bottom:10px">
+      ${emojiBtn('astIcon',ic,'בחירת אייקון')}
+      <input id="astName" placeholder="${k==='stock'?'שם (למשל: אפל)':'שם (למשל: חיסכון במיטב דש)'}"
+        value="${esc((a&&a.name)||'')}" style="max-width:240px">
+    </div>
+    ${k==='stock'?`<div class="toolbar" style="margin-bottom:10px">
+      <input id="astSym" placeholder="סימול (AAPL)" value="${esc((a&&a.symbol)||'')}" style="max-width:150px">
+      <input id="astQty" type="number" step="any" inputmode="decimal" placeholder="כמות"
+        value="${a&&a.qty?a.qty:''}" style="max-width:130px">
+    </div>`:`<div class="toolbar" style="margin-bottom:10px">
+      <input id="astVal" type="number" step="any" inputmode="decimal" placeholder="שווי היום (₪)"
+        value="${a?a.valueBase:''}" style="max-width:170px">
+      <input id="astDate" type="date" value="${(a&&a.valueDate)||todayStr()}" style="max-width:170px">
+    </div>`}
+    <div class="toolbar" style="margin-bottom:10px">
+      <input id="astCost" type="number" step="any" inputmode="decimal"
+        placeholder="כמה הפקדתם בסך הכול (לא חובה)" value="${a&&a.costBase?a.costBase:''}" style="max-width:280px">
+    </div>
+    <p class="sub" style="margin:-4px 0 12px">בלי השדה הזה לא נציג תשואה. עדיף בלי מספר מאשר עם מספר שממציא רווח.
+      ${a?`הפקדות שנרשמו כאן באפליקציה (${money(assetDeposits(a,''))}) מתווספות אליו לבד.`:''}</p>
+    ${astErr?`<p class="sub" style="color:var(--critical)">${esc(astErr)}</p>`:''}
+    <div class="toolbar">
+      <button class="btn" id="astSave">${isNew?'הוספה':'שמירה'}</button>
+      <button class="btn ghost" id="astCancel">ביטול</button>
+    </div>
+  </div>`;
+}
+
+function viewAssets(){
+  const tot=assetsTotal(), bal=hasOpening()?balanceNow():null;
+  const nw=netWorth();
+  const cost=S.assets.reduce((s,a)=>s+assetCost(a),0);
+  /* רווח כולל מוצג רק כששני התנאים מתקיימים לכל נכס: יש לו שווי,
+     ויש לו עלות ידועה. נכס אחד בלי "כמה הפקדתם" היה נספר כרווח מלא
+     ומנפח את התמונה — עדיף להראות רק את השווי מאשר רווח שקרי. */
+  const full=S.assets.length&&S.assets.every(a=>assetValue(a)!=null&&assetCost(a)>0);
+  const gain=full?tot-cost:null;
+  const stamp=priceStamp();
+  const editing=astEdit&&astEdit!=='new'?S.assets.find(a=>a.id===astEdit):null;
+
+  return `
+  <div class="card">
+    <h2>💼 נכסים</h2>
+    <p class="sub">כאן יושב הכסף שכבר יצא מהעו"ש וממשיך לעבוד — מניות, קרנות, חיסכון.
+      הוא <b>אינו</b> חלק מהעו"ש ואינו נספר כהוצאה.</p>
+    ${S.assets.length?`
+    <div class="big" style="margin:2px 0 4px">${money(tot)}</div>
+    <p class="sub" style="margin:0 0 12px">
+      ${gain!=null?`הופקדו ${money(cost)} · ${gain>=0?'ברווח':'בהפסד'} של <b class="${gain>=0?'pos':'neg'}">${money(Math.abs(gain))}</b>`
+        :'סך שווי הנכסים'}
+      ${nw!=null?` · יחד עם העו"ש (${money(bal)}) — <b>שווי נטו ${money(nw)}</b>`:''}</p>
+    <div class="astlist">${S.assets.map(assetRow).join('')}</div>
+    ${stockAssets().length?`<div class="toolbar" style="margin-top:12px">
+      <button class="btn ghost sm" id="astRefresh" ${quoteBusy?'disabled':''}>
+        ${quoteBusy?'מרענן…':'רענון מחירים'}</button>
+      <span class="sub" style="margin:0">${stamp?`מחירים מ-${stamp} · מתעכבים ואינם ציטוט מסחר`:'עוד לא נמשכו מחירים'}</span>
+    </div>`:''}
+    ${quoteErr?`<p class="sub" style="color:var(--critical);margin-top:8px">${
+      quoteErr.indexOf('missing:')===0
+        ? `לא מצאנו את הסימול ${esc(quoteErr.slice(8))}. בדקו את הכתיב — נייר בתל אביב מסתיים ב-.TA`
+        : esc(QMSG[quoteErr]||'לא הצלחנו לעדכן מחירים')}${
+      quoteErr.indexOf('missing:')!==0&&stamp?` — מוצג השווי האחרון הידוע, מ-${stamp}.`:''}</p>`:''}
+    `:`<p class="sub">עוד לא הוספתם נכסים.</p>`}
+    ${astEdit?'':`<div class="toolbar" style="margin-top:12px">
+      <button class="btn" id="astNew">＋ הוספת נכס</button></div>`}
+  </div>
+  ${astEdit?assetForm(editing):''}
+  <div class="card">
+    <p class="sub" style="margin:0">המספרים כאן הם לתצוגה בלבד ולא ייעוץ השקעות.
+      מחירי ניירות מגיעים מספק חיצוני, מתעכבים, ועשויים להיות שגויים.
+      לפני החלטה — בדקו מול הגוף שמנהל את הכסף.</p>
+  </div>`;
+}
+
+function wireAssets(){
+  const nb=document.getElementById('astNew');
+  if(nb)nb.onclick=()=>{astEdit='new';astErr='';drawAssets()};
+  const rb=document.getElementById('astRefresh');
+  if(rb)rb.onclick=()=>refreshQuotes(true);
+
+  document.querySelectorAll('.astEdit').forEach(b=>b.onclick=()=>{
+    astEdit=b.dataset.id;astErr='';drawAssets()});
+  document.querySelectorAll('.astDel').forEach(b=>b.onclick=()=>{
+    const a=Object.assign({},S.assets.find(x=>x.id===b.dataset.id));
+    if(!a.id)return;
+    /* התנועות שקושרו לנכס נשארות — הן כסף שבאמת יצא מהעו"ש.
+       מה שנמחק הוא ההחזקה, לא ההיסטוריה. */
+    S.tx.forEach(t=>{if(t.assetId===a.id){t.assetId=null;touch(t)}});
+    removeRec('assets',a.id);save();drawAssets();
+    toast(`"${a.name}" נמחק`,{label:'ביטול',fn:()=>{undoRemove('assets',a);drawAssets()}});
+  });
+
+  const kb=document.getElementById('astKind');
+  if(kb)kb.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    astType=b.dataset.v;drawAssets()});
+
+  const cb=document.getElementById('astCancel');
+  if(cb)cb.onclick=()=>{astEdit=null;astErr='';drawAssets()};
+
+  const sv=document.getElementById('astSave');
+  if(sv)sv.onclick=saveAsset;
+}
+
+function saveAsset(){
+  const editing=astEdit&&astEdit!=='new'?S.assets.find(a=>a.id===astEdit):null;
+  const k=editing?editing.kind:astType;
+  const name=(document.getElementById('astName').value||'').trim();
+  if(!name){astErr='צריך שם';drawAssets();return}
+  const cost=+(document.getElementById('astCost').value||0)||0;
+  const icon=emojiValue('astIcon')||(k==='stock'?'📈':'🐷');
+
+  let patch={name,icon,costBase:cost,kind:k};
+  if(k==='stock'){
+    const sym=(document.getElementById('astSym').value||'').trim().toUpperCase();
+    const qty=+(document.getElementById('astQty').value||0)||0;
+    if(!sym){astErr='צריך סימול — בלעדיו אין מחיר';drawAssets();return}
+    if(qty<=0){astErr='צריך כמות גדולה מאפס';drawAssets();return}
+    patch.symbol=sym;patch.qty=qty;
+    if(editing&&editing.symbol!==sym){patch.lastPrice=null;patch.lastCcy='';patch.lastPriceAt=''}
+  }else{
+    const val=+(document.getElementById('astVal').value||0)||0;
+    const date=document.getElementById('astDate').value||todayStr();
+    if(val<0){astErr='שווי שלילי אינו נכס';drawAssets();return}
+    patch.valueBase=val;patch.valueDate=date;
+  }
+
+  if(editing)Object.assign(editing,patch),touch(editing);
+  else S.assets.push(touch(Object.assign(
+    {id:uid(),symbol:'',qty:0,valueBase:0,valueDate:'',lastPrice:null,lastCcy:'',
+     lastPriceAt:'',archived:false,slot:S.assets.length+1},patch)));
+
+  astEdit=null;astErr='';save();drawAssets();
+  toast(editing?'עודכן ✓':'הנכס נוסף ✓');
+  if(k==='stock')refreshQuotes(true);
+}
+
+/* ציור מקומי כדי שרענון מחירים לא יאפס גלילה בשאר האפליקציה */
+function drawAssets(){
+  if(tab!=='assets')return;
+  document.getElementById('view').innerHTML=viewAssets();
+  wireAssets();wireEmoji();
 }
 
 /* ==================== יועץ הכיס ====================
