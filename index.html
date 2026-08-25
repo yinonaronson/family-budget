@@ -3068,6 +3068,9 @@ function advErrorHtml(){
     no_consent:'האישור בוטל. אפשר לאשר שוב מההגדרות.',
     rate_day:'הגעתם לתקרה של 3 ניתוחים ביום. נסו שוב מחר.',
     rate_month:'הגעתם לתקרה החודשית של הניתוחים.',
+    not_deployed:'היועץ עוד לא הותקן בשרת, אז אין כרגע מה להריץ. '
+      +'זה לא משהו שתלוי בכם — ניסיון נוסף לא יעזור עד שההתקנה תושלם.',
+    too_big:'יש כאן יותר נתונים ממה שאפשר לשלוח בבת אחת.',
     upstream:'שירות הניתוח לא זמין כרגע. שווה לנסות שוב בעוד כמה דקות.',
     parse:'התשובה חזרה במבנה שלא הצלחנו לקרוא. נסו שוב.',
     unauthorized:'צריך להתחבר מחדש.',
@@ -3079,7 +3082,8 @@ function advErrorHtml(){
       <span class="eic">😕</span>
       ${esc(MSG[advError]||'משהו השתבש: '+advError)}
     </div>
-    ${advError.indexOf('rate')===0?'':'<button class="btn block" id="advRetry">ניסיון נוסף</button>'}
+    ${(advError.indexOf('rate')===0||advError==='not_deployed'||advError==='not_configured')
+      ?'':'<button class="btn block" id="advRetry">ניסיון נוסף</button>'}
   </div>`;
 }
 function wireAdvRetry(){
@@ -3140,6 +3144,60 @@ function wireAdvResult(){
   document.getElementById('advAgain').onclick=()=>{advResult=null;runAdvisor()};
 }
 
+/* ---------- בניית המטען ----------
+   נבנה כאן ולא בשרת: כל הנתונים כבר בזיכרון, אז אין טעם לשלוף אותם
+   שוב. מה שחייב להישאר בשרת — מי אתה, אם אישרתם, תקרת השימוש ומעקות
+   הניסוח — נשאר שם, ולכן אין כאן מה לעקוף. */
+const ADV_TX_DAYS=120, ADV_TX_CAP=500;
+
+function advPayload(){
+  const m=thisMonth(), d=new Date();
+  const back=new Date(Date.now()-ADV_TX_DAYS*864e5).toISOString().slice(0,10);
+
+  const byMonth={}, catMonth={};
+  S.tx.forEach(t=>{
+    const mm=t.date.slice(0,7);
+    byMonth[mm]=byMonth[mm]||{income:0,expense:0};
+    if(t.type==='income')byMonth[mm].income+=+t.amount;
+    else{
+      byMonth[mm].expense+=+t.amount;
+      const c=anyCat(t.catId), n=c?c.name:'ללא קטגוריה';
+      catMonth[n]=catMonth[n]||{};
+      catMonth[n][mm]=(catMonth[n][mm]||0)+(+t.amount);
+    }
+  });
+
+  const recent=S.tx.filter(t=>t.date>=back)
+    .sort((a,b)=>b.date.localeCompare(a.date)).slice(0,ADV_TX_CAP)
+    .map(t=>{const c=anyCat(t.catId), w=who(t);
+      return {d:t.date,a:+t.amount,k:t.type==='income'?'in':'out',
+              c:c?c.name:'',w:w?w.name:'',n:t.note||'',f:t.fixed||undefined}});
+
+  return {
+    today:todayStr(), current_month:m, day_of_month:d.getDate(),
+    days_in_month:new Date(d.getFullYear(),d.getMonth()+1,0).getDate(),
+    members:S.members.map(x=>x.name),
+    monthly_totals:Object.keys(byMonth).sort().map(k=>({month:k,
+      income:Math.round(byMonth[k].income),expense:Math.round(byMonth[k].expense)})),
+    categories:S.categories.map(c=>({name:c.name,budget_now:budgetAt(c,m),
+      every_n_months:+c.freq||1,spent_by_month:catMonth[c.name]||{}})),
+    income_sources:S.incomeCats.map(c=>c.name),
+    recurring:S.recurring.filter(r=>r.active!==false).map(r=>{
+      const c=catById(r.catId);
+      return {name:r.name,amount:+r.amount,category:c?c.name:'',day:r.day}}),
+    /* יעדים משפחתיים בלבד. יעד אישי לא עוזב את המערכת, נקודה. */
+    family_goals:S.goals.filter(g=>!g.ownerId).map(g=>({name:g.name,
+      target:+g.target,saved:Math.round(goalSaved(g)),by:g.date||null})),
+    recent_transactions:recent,
+    notes_for_you:[
+      'רשימת התנועות המפורטת מכסה '+ADV_TX_DAYS+' ימים אחרונים ומוגבלת ל-'
+        +ADV_TX_CAP+' רשומות.',
+      'סיכומים חודשיים מכסים טווח ארוך יותר וגוברים על ספירה ידנית של הרשימה.',
+      'יעדי חיסכון אישיים אינם כלולים כאן במכוון.',
+    ],
+  };
+}
+
 /* ---------- הקריאה עצמה ---------- */
 async function runAdvisor(){
   if(advBusy)return;
@@ -3151,13 +3209,18 @@ async function runAdvisor(){
     const r=await fetch(SUPA.url+'/functions/v1/advisor',{
       method:'POST',
       headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-      body:JSON.stringify({household_id:HH.id}),
+      body:JSON.stringify({household_id:HH.id,payload:advPayload()}),
     });
     const j=await r.json().catch(()=>({error:'parse'}));
-    if(!r.ok){advError=j.error||('http_'+r.status)}
+    /* 404 פירושו שהפונקציה לא נפרסה כלל. "נסו שוב בעוד כמה דקות"
+       היה משקר כאן — ניסיון נוסף לא יעזור לעולם. */
+    if(r.status===404)advError='not_deployed';
+    else if(!r.ok){advError=j.error||('http_'+r.status)}
     else advResult=j;
   }catch(e){
-    advError=(e&&e.message==='unauthorized')?'unauthorized':'upstream';
+    /* fetch שנכשל בלי סטטוס הוא כמעט תמיד preflight שלא נענה —
+       כלומר הפונקציה לא קיימת, ולא "השירות עמוס" */
+    advError=(e&&e.message==='unauthorized')?'unauthorized':'not_deployed';
   }
   advBusy=false;drawAdvisor();
 }
