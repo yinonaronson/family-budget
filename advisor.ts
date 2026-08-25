@@ -98,8 +98,11 @@ const SYSTEM = [
   '  "income_ideas": [{ "title": "כותרת", "detail": "כללי, לא מותאם אישית." }]',
   '}',
   '',
-  'findings: בין 3 ל-6. income_ideas: בין 2 ל-4, ורק כאלה שרלוונטיים',
+  'findings: בין 3 ל-5. income_ideas: 2 או 3, ורק כאלה שרלוונטיים',
   'למשק בית ולא דורשים הון התחלתי.',
+  '',
+  'קצר עדיף. detail הוא משפט אחד, לא שניים. action הוא חצי שורה.',
+  'אורך התשובה משפיע ישירות על כמה זמן המשתמש מחכה מול מסך טעינה.',
 ].join(NL);
 
 Deno.serve(async (req) => {
@@ -162,7 +165,10 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 2000,
+        // עברית יקרה בטוקנים. עם 2000 התשובה נחתכה באמצע ה-JSON
+        // וההמרה נכשלה, אז התקרה כאן נדיבה בכוונה — היא רק תקרה,
+        // ומשלמים על מה שנוצר בפועל.
+        max_tokens: 8000,
         system: SYSTEM,
         messages: [{
           role: 'user',
@@ -181,6 +187,13 @@ Deno.serve(async (req) => {
       return json({ error: code, status: r.status, detail }, 502);
     }
     const data = await r.json();
+    // אם התשובה נקטעה בגלל התקרה, אין טעם לנסות להמיר אותה —
+    // עדיף להגיד את זה מפורשות מאשר להיכשל ב-JSON.parse בלי הסבר
+    if (data.stop_reason === 'max_tokens') {
+      await sb.from('advisor_runs').insert(
+        { household_id: hid, created_by: user.id, ok: false, note: 'truncated' });
+      return json({ error: 'truncated' }, 502);
+    }
     const t = (data.content || []).map((c: any) => c.text || '').join('');
     // בלי ביטוי רגולרי: חותכים מהסוגר הראשון עד האחרון
     const i = t.indexOf('{'), j = t.lastIndexOf('}');

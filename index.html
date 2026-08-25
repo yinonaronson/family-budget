@@ -2933,7 +2933,7 @@ let advOpen=false, advBusy=false, advResult=null, advError='';
 
 const ADV_SENT=[
   ['📊','סכומים לפי קטגוריה וחודש','כמה יצא על כל קטגוריה בכל חודש, והתקציב שהגדרתם.'],
-  ['🧾','תנועות מ-120 הימים האחרונים','כולל התיאור שכתבתם ("קניות בשופרסל"), הסכום, התאריך ומי שילם. בלי זה אי אפשר לזהות מנויים וחיובים חוזרים.'],
+  ['🧾','תנועות מ-90 הימים האחרונים','כולל התיאור שכתבתם ("קניות בשופרסל"), הסכום, התאריך ומי שילם. בלי זה אי אפשר לזהות מנויים וחיובים חוזרים.'],
   ['🔁','הוראות קבע ויעדי חיסכון משפחתיים','שם, סכום ותאריך.'],
   ['🔒','מה לא נשלח','כתובות מייל, סיסמאות, ויעדי חיסכון אישיים. לעולם.'],
 ];
@@ -2974,7 +2974,7 @@ function drawAdvisor(){
   if(!HH){el.innerHTML='';return}
 
   if(!HH.aiConsent){el.innerHTML=advConsentHtml();wireAdvConsent();return}
-  if(advBusy){el.innerHTML=advBusyHtml();return}
+  if(advBusy){el.innerHTML=advBusyHtml();wireAdvBusy();return}
   if(advError){el.innerHTML=advErrorHtml();wireAdvRetry();return}
   if(!advResult){el.innerHTML=advReadyHtml();wireAdvRun();return}
   el.innerHTML=advResultHtml();wireAdvResult();
@@ -3037,7 +3037,7 @@ function advReadyHtml(){
   return `
   ${advHead('🧠 יועץ הכיס','ניתוח של הנתונים שלכם')}
   <div class="advbody">
-    <p>אני אקרא את הסכומים לפי קטגוריה, את ההוצאות של 120 הימים האחרונים
+    <p>אני אקרא את הסכומים לפי קטגוריה, את ההוצאות של 90 הימים האחרונים
       ואת ההוראות הקבע, ואחזור עם מה שבולט.</p>
     <p class="sub">שווה לזכור: אני רואה רק מה שנרשם כאן. אני לא יודע במה
       אתם עוסקים, מה הכישורים שלכם או מה השוק משלם — אז בכל מה שנוגע
@@ -3057,9 +3057,20 @@ function advBusyHtml(){
   <div class="advbody">
     <div class="advload">
       <div class="advdots"><i></i><i></i><i></i></div>
-      <p class="sub">בדרך כלל לוקח בין 10 ל-30 שניות.</p>
+      <p class="sub">הניתוח לוקח בדרך כלל בין חצי דקה לדקה.<br>
+        אפשר לסגור את המסך — זה לא יבטל אותו.</p>
+      <button class="btn ghost sm" id="advCancel" style="margin-top:18px">ביטול</button>
     </div>
   </div>`;
+}
+/* חובה לחבר גם את מסך הטעינה. בלי זה ה-✕ לא עושה כלום, ומי שהניתוח
+   נתקע אצלו כלוא במסך בלי דרך לצאת חוץ מרענון. */
+function wireAdvBusy(){
+  const stop=()=>{advRunId++;advBusy=false;if(advAbort)advAbort.abort();closeAdvisor()};
+  const x=document.getElementById('advClose');
+  if(x)x.onclick=stop;
+  const c=document.getElementById('advCancel');
+  if(c)c.onclick=stop;
 }
 
 function advErrorHtml(){
@@ -3077,6 +3088,9 @@ function advErrorHtml(){
     upstream:'שירות הניתוח לא זמין כרגע. שווה לנסות שוב בעוד כמה דקות.',
     parse:'התשובה חזרה במבנה שלא הצלחנו לקרוא. נסו שוב.',
     unauthorized:'צריך להתחבר מחדש.',
+    timeout:'הניתוח לקח יותר מדי זמן והופסק. ייתכן שהוא כן הסתיים בשרת — '
+      +'שווה לנסות שוב בעוד רגע.',
+    render:'הניתוח חזר, אבל לא הצלחנו להציג אותו. נסו שוב.',
   };
   return `
   ${advHead('🧠 יועץ הכיס','')}
@@ -3152,7 +3166,7 @@ function wireAdvResult(){
    נבנה כאן ולא בשרת: כל הנתונים כבר בזיכרון, אז אין טעם לשלוף אותם
    שוב. מה שחייב להישאר בשרת — מי אתה, אם אישרתם, תקרת השימוש ומעקות
    הניסוח — נשאר שם, ולכן אין כאן מה לעקוף. */
-const ADV_TX_DAYS=120, ADV_TX_CAP=500;
+const ADV_TX_DAYS=90, ADV_TX_CAP=250;
 
 function advPayload(){
   const m=thisMonth(), d=new Date();
@@ -3203,9 +3217,19 @@ function advPayload(){
 }
 
 /* ---------- הקריאה עצמה ---------- */
+let advAbort=null, advRunId=0;
+const ADV_TIMEOUT=120000;
+
 async function runAdvisor(){
   if(advBusy)return;
+  /* בקשה ישנה שחוזרת מאוחר לא תדרוס מצב חדש יותר. בלי זה, ניתוח
+     שביטלו וניתוח שהתחיל אחריו נלחמים על אותם משתנים. */
+  const myRun=++advRunId;
+  const mine=()=>myRun===advRunId;
   advBusy=true;advError='';advResult=null;drawAdvisor();
+  advAbort=('AbortController' in window)?new AbortController():null;
+  /* בלי פסק זמן, חיבור שנתקע משאיר את הספינר מסתובב לנצח */
+  const timer=setTimeout(()=>{if(advAbort)advAbort.abort()},ADV_TIMEOUT);
   try{
     const {data:{session}}=await sb.auth.getSession();
     const token=session&&session.access_token;
@@ -3214,19 +3238,37 @@ async function runAdvisor(){
       method:'POST',
       headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
       body:JSON.stringify({household_id:HH.id,payload:advPayload()}),
+      signal:advAbort?advAbort.signal:undefined,
     });
-    const j=await r.json().catch(()=>({error:'parse'}));
+    let j=null,bad=false;
+    try{j=await r.json()}catch(e){bad=true}
     /* 404 פירושו שהפונקציה לא נפרסה כלל. "נסו שוב בעוד כמה דקות"
        היה משקר כאן — ניסיון נוסף לא יעזור לעולם. */
     if(r.status===404)advError='not_deployed';
-    else if(!r.ok){advError=j.error||('http_'+r.status)}
-    else advResult=j;
+    else if(bad)advError='parse';
+    else if(!r.ok)advError=(j&&j.error)||('http_'+r.status);
+    /* תשובה במבנה לא צפוי הפילה את הציור, והמסך נשאר תקוע על הספינר
+       למרות שהשרת סיים בהצלחה. בודקים לפני שמאמינים. */
+    else if(!j||!Array.isArray(j.findings))advError='parse';
+    else advResult={headline:j.headline||'',findings:j.findings,
+      income_ideas:Array.isArray(j.income_ideas)?j.income_ideas:[],
+      used_today:j.used_today,max_per_day:j.max_per_day};
   }catch(e){
-    /* fetch שנכשל בלי סטטוס הוא כמעט תמיד preflight שלא נענה —
-       כלומר הפונקציה לא קיימת, ולא "השירות עמוס" */
-    advError=(e&&e.message==='unauthorized')?'unauthorized':'not_deployed';
+    if(e&&e.name==='AbortError')advError='timeout';
+    else if(e&&e.message==='unauthorized')advError='unauthorized';
+    /* fetch שנכשל בלי סטטוס הוא כמעט תמיד preflight שלא נענה */
+    else advError='not_deployed';
   }
-  advBusy=false;drawAdvisor();
+  clearTimeout(timer);
+  if(!mine())return;                 /* ריצה ישנה — לא נוגעים במסך */
+  advAbort=null;advBusy=false;
+  /* גם הציור עצמו יכול להיכשל, ואם הוא נכשל בשקט המשתמש נשאר מול
+     ספינר נצחי. עדיף להראות שגיאה מאשר להיתקע. */
+  try{drawAdvisor()}
+  catch(e){
+    advResult=null;advError='render';
+    try{drawAdvisor()}catch(e2){closeAdvisor();toast('הצגת הניתוח נכשלה')}
+  }
 }
 
 /* ---------- כרטיס בהגדרות ---------- */
@@ -3295,7 +3337,7 @@ const DISCLOSURE=[
   ['🧠','יועץ הכיס — הפעם היחידה שנתונים יוצאים החוצה',
    'כברירת מחדל שום נתון שלכם לא עוזב את השרתים שלנו. אם <b>אישרתם במפורש</b> את יועץ הכיס, '
    +'הנתונים נשלחים לניתוח אצל Anthropic (החברה שמפעילה את Claude) — סכומים לפי קטגוריה, '
-   +'תנועות של 120 הימים האחרונים כולל התיאור שכתבתם, והוראות קבע. '
+   +'תנועות של 90 הימים האחרונים כולל התיאור שכתבתם, והוראות קבע. '
    +'לא נשלחים מיילים, סיסמאות או יעדי חיסכון אישיים. '
    +'האישור חל על כל המשפחה, רשום מי נתן אותו ומתי, וניתן לביטול בכל רגע בהגדרות.'],
 
