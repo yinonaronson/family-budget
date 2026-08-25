@@ -1303,9 +1303,15 @@ function forecast(){
   const gotIn=mine.filter(t=>t.type==='income'&&t.date<=today)
     .reduce((a,t)=>a+t.amount,0);
   const incLeft=Math.max(0,typicalIncome()-gotIn-laterIn);
+  const gotSoFar=gotIn;
 
   const bal=balanceNow();
-  return {bal, day, dim, laterOut, laterIn, varLeft, incLeft,
+  /* incLeft=0 יכול לנבוע משתי סיבות הפוכות: או שההכנסה כבר נכנסה,
+     או שאין לנו בכלל היסטוריה להשוות אליה. הכרטיס חייב להבדיל
+     ביניהן — אחרת שתיקה נקראת כאילו ההכנסה נלקחה בחשבון. */
+  const typical=typicalIncome();
+  return {bal, day, dim, laterOut, laterIn, varLeft, incLeft, gotSoFar,
+          typical, noIncomeHistory: typical===0,
           end: bal - laterOut + laterIn + incLeft - varLeft};
 }
 
@@ -2303,6 +2309,27 @@ function viewDash(){
    מוצג רק אחרי שהוזנה יתרת פתיחה. בלי יתרת פתיחה המספר הוא
    "כמה השתנה מאז שהתחלנו לרשום", וזה לא עו"ש — זה משהו אחר
    שקל לטעות ולקרוא לו עו"ש. */
+/* ההנחות שמאחורי התחזית, כמשפטים נפרדים.
+   הכלל כאן: הנחה שלא נאמרת נקראת כאילו לא נעשתה. במיוחד ההנחה
+   "לא תיכנס עוד הכנסה" — כשהיא נובעת מחוסר היסטוריה ולא מידיעה,
+   השתיקה גורמת לתחזית להיראות ודאית יותר משהיא. */
+function forecastNotes(f){
+  const n=[`נותרו ${f.dim-f.day} ימים בחודש.`];
+  n.push(`מניח שההוצאה המשתנה תימשך באותו קצב — עוד ${money(f.varLeft)}.`);
+  if(f.laterOut)n.push(`ושיירדו ${money(f.laterOut)} שכבר רשומים בהמשך החודש.`);
+  if(f.laterIn)n.push(`ושייכנסו ${money(f.laterIn)} שכבר רשומים.`);
+  if(f.incLeft>0)
+    n.push(`ושתיכנס עוד הכנסה של ${money(f.incLeft)}, לפי החודשים הקודמים.`);
+  else if(f.noIncomeHistory)
+    n.push(`<b>ומניח שלא תיכנס עוד הכנסה החודש</b> — לא כי ידוע שלא תיכנס,
+      אלא כי אין עדיין היסטוריית הכנסות להשוות אליה. אם צפויה עוד הכנסה,
+      התחזית נמוכה מדי בדיוק בגובהה.`);
+  else
+    n.push(`ומניח שלא תיכנס עוד הכנסה החודש, כי כבר נכנסו
+      ${money(f.gotSoFar)} — בגובה הרגיל לחודשים הקודמים.`);
+  return n;
+}
+
 function cashCard(){
   if(!HH)return '';
   if(!hasOpening())return `
@@ -2325,9 +2352,7 @@ function cashCard(){
     ${f?`<p class="sub" style="margin:0">
       צפי לסוף ${monthLabel(thisMonth())}:
       <b class="${f.end<0?'neg':'pos'}">${money(f.end)}</b>
-      <br><span style="font-size:12px">מניח שיירדו עוד ${money(f.laterOut)} שכבר רשומים,
-      שההוצאה המשתנה תימשך באותו קצב (${money(f.varLeft)})${f.incLeft>0
-        ?`, ושתיכנס עוד הכנסה של ${money(f.incLeft)} לפי החודשים הקודמים`:''}.</span></p>`:''}
+      <br><span style="font-size:12px">${forecastNotes(f).join(' ')}</span></p>`:''}
     ${t.transfer||S.assets.length?`<div class="split" style="margin-top:14px">
       ${t.transfer?`<div class="mini"><div class="l"><i class="dot" style="background:var(--s5)"></i>הועבר לחיסכון החודש</div>
         <div class="v">${money(t.transfer)}</div></div>`:''}
