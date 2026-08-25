@@ -2793,6 +2793,11 @@ function viewBudget(){
       return `<span style="display:inline-flex;align-items:center;gap:7px;background:var(--plane);border:1px solid var(--ring);border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:600">
         ${i.icon} ${esc(i.name)}${tot?` <b style="color:var(--muted);font-weight:600">· ${money(tot)}</b>`:''}
         <b class="delXfer" data-id="${i.id}" style="color:var(--muted);cursor:pointer">✕</b></span>`}).join('')}</div>
+    ${/* משפחות שנפתחו לפני שההעברות נוספו מגיעות לכאן בלי אף יעד.
+          לא מייצרים להן אותם מאחורי הגב — מציעים, והן מחליטות.
+          כך גם מי שמחק את השניים בכוונה לא מקבל אותם שוב בכל טעינה. */
+      S.transferCats.length?'':`<p class="sub" style="margin-bottom:13px">
+        עוד לא הגדרתם יעדים. <button class="btn ghost sm" id="seedXfer">הוספת חיסכון ומניות</button></p>`}
     <div class="toolbar">
       ${emojiBtn('newXferIcon','🐷','בחירת אייקון')}
       <input id="newXfer" placeholder="יעד חדש (למשל: קרן השתלמות)" style="max-width:230px">
@@ -2832,6 +2837,10 @@ function wireBudget(){
     addCategory('income',n,emojiValue('newIncIcon'),0);
     save();render();toast('מקור ההכנסה נוסף ✓')};
   document.querySelectorAll('.delInc').forEach(b=>b.onclick=()=>{removeRec('incomeCats',b.dataset.id);save();render()});
+  const sx=document.getElementById('seedXfer');
+  if(sx)sx.onclick=()=>{
+    DEFAULT_TRANSFER.forEach(([ic,n])=>addCategory('transfer',n,ic,0));
+    save();render();toast('נוספו חיסכון ומניות ✓')};
   const ax=document.getElementById('addXfer');
   if(ax)ax.onclick=()=>{
     const n=document.getElementById('newXfer').value.trim();if(!n)return;
