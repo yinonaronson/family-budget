@@ -3071,6 +3071,9 @@ function advErrorHtml(){
     not_deployed:'היועץ עוד לא הותקן בשרת, אז אין כרגע מה להריץ. '
       +'זה לא משהו שתלוי בכם — ניסיון נוסף לא יעזור עד שההתקנה תושלם.',
     too_big:'יש כאן יותר נתונים ממה שאפשר לשלוח בבת אחת.',
+    no_credit:'אין יתרה בחשבון ה-API שמפעיל את היועץ, אז הבקשה נדחתה. '
+      +'זה לא ייפתר מעצמו — צריך לטעון קרדיט בחשבון.',
+    bad_key:'המפתח שהוגדר ליועץ אינו תקף. צריך להחליף אותו בהגדרות השרת.',
     upstream:'שירות הניתוח לא זמין כרגע. שווה לנסות שוב בעוד כמה דקות.',
     parse:'התשובה חזרה במבנה שלא הצלחנו לקרוא. נסו שוב.',
     unauthorized:'צריך להתחבר מחדש.',
@@ -3082,7 +3085,8 @@ function advErrorHtml(){
       <span class="eic">😕</span>
       ${esc(MSG[advError]||'משהו השתבש: '+advError)}
     </div>
-    ${(advError.indexOf('rate')===0||advError==='not_deployed'||advError==='not_configured')
+    ${['rate_day','rate_month','not_deployed','not_configured','no_credit','bad_key']
+      .indexOf(advError)>=0
       ?'':'<button class="btn block" id="advRetry">ניסיון נוסף</button>'}
   </div>`;
 }

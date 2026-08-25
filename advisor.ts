@@ -138,11 +138,13 @@ Deno.serve(async (req) => {
 
   const dayAgo = new Date(Date.now() - 864e5).toISOString();
   const monAgo = new Date(Date.now() - 30 * 864e5).toISOString();
+  // סופרים רק הרצות שהצליחו. ניסיון שנכשל לא עלה כסף, ואם הוא היה
+  // נספר — שלוש תקלות רצופות היו נועלות את המשפחה ליום שלם.
   const [{ count: dayN }, { count: monN }] = await Promise.all([
     sb.from('advisor_runs').select('id', { count: 'exact', head: true })
-      .eq('household_id', hid).gte('created_at', dayAgo),
+      .eq('household_id', hid).eq('ok', true).gte('created_at', dayAgo),
     sb.from('advisor_runs').select('id', { count: 'exact', head: true })
-      .eq('household_id', hid).gte('created_at', monAgo),
+      .eq('household_id', hid).eq('ok', true).gte('created_at', monAgo),
   ]);
   if ((dayN ?? 0) >= MAX_PER_DAY) return json({ error: 'rate_day', max: MAX_PER_DAY }, 429);
   if ((monN ?? 0) >= MAX_PER_MONTH) return json({ error: 'rate_month', max: MAX_PER_MONTH }, 429);
@@ -172,7 +174,11 @@ Deno.serve(async (req) => {
       const detail = (await r.text()).slice(0, 300);
       await sb.from('advisor_runs').insert(
         { household_id: hid, created_by: user.id, ok: false, note: 'anthropic ' + r.status });
-      return json({ error: 'upstream', status: r.status, detail }, 502);
+      // תקלות חשבון לא חולפות מעצמן, ולכן אסור להציג אותן כעומס זמני
+      const low = detail.indexOf('credit balance') >= 0;
+      const badKey = r.status === 401 || detail.indexOf('authentication_error') >= 0;
+      const code = low ? 'no_credit' : badKey ? 'bad_key' : 'upstream';
+      return json({ error: code, status: r.status, detail }, 502);
     }
     const data = await r.json();
     const t = (data.content || []).map((c: any) => c.text || '').join('');
