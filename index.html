@@ -573,6 +573,61 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 .swrow input{width:19px;height:19px;flex:0 0 auto;margin-top:1px;accent-color:var(--s1)}
 .swrow .sub{margin:3px 0 0;display:block}
 
+/* ==================== יועץ הכיס ==================== */
+/* var(--plane) ולא var(--bg) — משתנה כזה לא קיים בערכה, והתוצאה
+   הייתה שכבה שקופה שהדשבורד נראה מבעדה */
+.adv{position:fixed;inset:0;z-index:70;background:var(--plane);
+  overflow-y:auto;display:none;-webkit-overflow-scrolling:touch}
+.adv.on{display:block}
+.adv .advwrap{max-width:640px;margin:0 auto;padding:22px 18px 60px}
+.advhead{display:flex;align-items:flex-start;gap:14px;margin-bottom:6px}
+.advhead h1{font-size:23px;font-weight:800;margin:0}
+.advhead .sub{margin:5px 0 0}
+.advx{margin-inline-start:auto;background:var(--plane);border:1px solid var(--ring);
+  border-radius:10px;width:36px;height:36px;flex:0 0 auto;font-size:15px;
+  color:var(--muted);cursor:pointer}
+.advbody{margin-top:16px;line-height:1.75}
+.advbody p{margin:0 0 12px}
+.advlead{font-size:17px;font-weight:700;line-height:1.65;
+  background:var(--plane);border:1px solid var(--ring);border-radius:13px;padding:15px 16px}
+
+.advsec{margin-top:24px}
+.advseclbl{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;
+  letter-spacing:.02em;color:var(--muted);text-transform:none;margin-bottom:11px;
+  padding-bottom:8px;border-bottom:1px solid var(--ring)}
+.advseclbl span{font-size:15px}
+
+.advfind{background:var(--surface-1);border:1px solid var(--ring);
+  border-radius:14px;padding:14px 15px;margin-bottom:11px}
+.afhead{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.afhead b{font-size:15.5px}
+.afic{font-size:19px}
+.afmoney{margin-inline-start:auto;font-size:12.5px;font-weight:800;
+  background:color-mix(in srgb,var(--s1) 13%,transparent);color:var(--s1);
+  border-radius:999px;padding:4px 10px;white-space:nowrap}
+.afev{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;
+  background:var(--plane);border-radius:8px;padding:7px 10px;margin-bottom:8px}
+.advfind p{margin:0 0 6px;font-size:14.5px}
+.afact{color:var(--s1);font-weight:600}
+
+/* הרעיונות נראים אחרת בכוונה — כדי שאי אפשר יהיה לבלבל בינם
+   לבין ממצא שנשען על מספר אמיתי */
+.advsec.ideas .advidea{border:1px dashed var(--ring);border-radius:12px;
+  padding:12px 14px;margin-bottom:9px;background:transparent}
+.advidea b{font-size:14.5px}
+.advidea p{margin:5px 0 0;font-size:14px;color:var(--text-secondary)}
+
+.advfoot{margin-top:22px;padding-top:14px;border-top:1px solid var(--ring);font-size:12.5px}
+.advload{text-align:center;padding:50px 0}
+.advdots{display:flex;gap:9px;justify-content:center;margin-bottom:18px}
+.advdots i{width:11px;height:11px;border-radius:50%;background:var(--s1);
+  animation:advb 1.1s ease-in-out infinite}
+.advdots i:nth-child(2){animation-delay:.16s}
+.advdots i:nth-child(3){animation-delay:.32s}
+@keyframes advb{0%,80%,100%{opacity:.25;transform:translateY(0)}
+  40%{opacity:1;transform:translateY(-7px)}}
+@media(prefers-reduced-motion:reduce){.advdots i{animation:none;opacity:.6}}
+
 </style>
 </head>
 <body>
@@ -868,6 +923,7 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 </div>
 
 <div class="auth" id="auth"><div id="authIn"></div></div>
+<div class="adv" id="adv"><div class="advwrap" id="advIn"></div></div>
 <div class="authboot" id="boot"><div>
   <div style="width:52px;height:52px;border-radius:16px;background:var(--s1);color:#fff;
        display:grid;place-items:center;font-size:25px;margin:0 auto 14px">₪</div>
@@ -1398,7 +1454,8 @@ async function flush(){
 async function loadHousehold(){
   const me=SESSION&&SESSION.user&&SESSION.user.id;
   const {data:mine,error:e1}=await sb.from('household_members')
-    .select('household_id,display_name,role,slot,joined_at,weekly_digest,households(id,name,onboarded,auto_fixed)')
+    .select('household_id,display_name,role,slot,joined_at,weekly_digest,'
+           +'households(id,name,onboarded,auto_fixed,ai_consent)')
     .eq('user_id',me);
   if(e1)throw e1;
   if(!mine||!mine.length){HH=null;return null}
@@ -1416,7 +1473,7 @@ async function loadHousehold(){
   }
   const h=pick.households||{};
   HH={id:pick.household_id,name:h.name||'המשפחה שלי',onboarded:!!h.onboarded,
-      autoFixed:h.auto_fixed!==false,
+      autoFixed:h.auto_fixed!==false, aiConsent:!!h.ai_consent,
       role:pick.role,others:mine.length-1};
   digestOn=!!pick.weekly_digest;
   return HH;
@@ -1992,6 +2049,8 @@ function viewDash(){
 
   ${backup}${bar}${list}
 
+  ${advisorCard()}
+
   <div class="card">
     <h2>🎯 ניצול תקציב</h2>
     <p class="sub">${monthLabel(month)} · ממוין לפי לחץ תקציבי${pc?' · הקו האנכי מסמן איפה אמורים להיות היום':''}</p>
@@ -2117,6 +2176,7 @@ function wireTxClicks(){
   });
 }
 function wireDash(){
+  wireAdvisorCard();
   const at=document.getElementById('alertToggle');if(at)at.onclick=()=>{alertsOpen=!alertsOpen;render()};
   const tc=document.getElementById('toggleCats');if(tc)tc.onclick=()=>{showAllCats=!showAllCats;render()};
   const al=document.getElementById('allTx');if(al)al.onclick=()=>go('tx');
@@ -2859,6 +2919,293 @@ function wireGoals(){
   });
 }
 
+/* ==================== יועץ הכיס ====================
+   הפעם הראשונה שנתונים של משפחה יוצאים מהשרתים שלנו לצד שלישי.
+   לכן שלושה דברים מובנים כאן ולא נוספו אחר כך:
+
+   1. אין קריאה אחת בלי הסכמה מפורשת, והמסך אומר במפורש מה נשלח.
+   2. ההסכמה היא ברמת המשפחה — הניתוח קורא את הנתונים של כל הבית,
+      אז זו לא החלטה שאדם אחד מקבל רק לעצמו. רשום מי אישר ומתי.
+   3. ההפרדה בין "מה שנמצא בנתונים" ל"רעיונות כלליים" היא ויזואלית
+      ולא רק מילולית, כי אחרת אף אחד לא ישים לב אליה. */
+
+let advOpen=false, advBusy=false, advResult=null, advError='';
+
+const ADV_SENT=[
+  ['📊','סכומים לפי קטגוריה וחודש','כמה יצא על כל קטגוריה בכל חודש, והתקציב שהגדרתם.'],
+  ['🧾','תנועות מ-120 הימים האחרונים','כולל התיאור שכתבתם ("קניות בשופרסל"), הסכום, התאריך ומי שילם. בלי זה אי אפשר לזהות מנויים וחיובים חוזרים.'],
+  ['🔁','הוראות קבע ויעדי חיסכון משפחתיים','שם, סכום ותאריך.'],
+  ['🔒','מה לא נשלח','כתובות מייל, סיסמאות, ויעדי חיסכון אישיים. לעולם.'],
+];
+
+function advisorCard(){
+  const on=HH&&HH.aiConsent;
+  return `
+  <div class="card">
+    <h2>🧠 יועץ הכיס</h2>
+    <p class="sub">קורא את הנתונים שלכם ומצביע על מה שבולט — הוצאות שגדלו,
+      קבועות ששווה לבדוק, עודף שלא הולך לשום מקום.
+      ${on?'':'דורש אישור חד-פעמי, כי הנתונים נשלחים לניתוח.'}</p>
+    <button class="btn" id="advGo">${on?'ניתוח החודש':'איך זה עובד'}</button>
+    ${on?`<p class="sub" style="margin:9px 0 0">עד 3 ניתוחים ביום.</p>`:''}
+  </div>`;
+}
+
+function wireAdvisorCard(){
+  const b=document.getElementById('advGo');
+  if(b)b.onclick=()=>openAdvisor();
+}
+
+/* ---------- המסך ---------- */
+function openAdvisor(){
+  advOpen=true;advError='';
+  document.getElementById('adv').classList.add('on');
+  document.body.style.overflow='hidden';
+  drawAdvisor();
+}
+function closeAdvisor(){
+  advOpen=false;
+  document.getElementById('adv').classList.remove('on');
+  document.body.style.overflow='';
+}
+
+function drawAdvisor(){
+  const el=document.getElementById('advIn');
+  if(!HH){el.innerHTML='';return}
+
+  if(!HH.aiConsent){el.innerHTML=advConsentHtml();wireAdvConsent();return}
+  if(advBusy){el.innerHTML=advBusyHtml();return}
+  if(advError){el.innerHTML=advErrorHtml();wireAdvRetry();return}
+  if(!advResult){el.innerHTML=advReadyHtml();wireAdvRun();return}
+  el.innerHTML=advResultHtml();wireAdvResult();
+}
+
+const advHead=(title,sub)=>`
+  <div class="advhead">
+    <div>
+      <h1>${title}</h1>
+      ${sub?`<p class="sub">${sub}</p>`:''}
+    </div>
+    <button class="advx" id="advClose" aria-label="סגירה">✕</button>
+  </div>`;
+
+function advConsentHtml(){
+  return `
+  ${advHead('🧠 יועץ הכיס','לפני שמתחילים — מה בדיוק קורה כאן')}
+  <div class="advbody">
+    <p>היועץ קורא את נתוני התקציב שלכם ומחזיר ממצאים. כדי לעשות את זה,
+      הנתונים נשלחים לניתוח אצל <b>Anthropic</b>, החברה שמפעילה את Claude.
+      זה צד שלישי — עד עכשיו שום נתון שלכם לא יצא מהשרתים שלנו.</p>
+
+    <div class="disc" style="margin:16px 0">
+      ${ADV_SENT.map(([ic,t,d])=>`
+        <div class="discrow"><span class="disc-ic">${ic}</span>
+          <div><b>${t}</b><p>${d}</p></div></div>`).join('')}
+    </div>
+
+    <p class="sub">Anthropic מצהירה שאינה מאמנת דגמים על נתונים שנשלחים
+      דרך ה-API. אנחנו לא שומרים את הניתוח — הוא מוצג לכם ונעלם.
+      מה שכן נשמר הוא רישום של מתי הופעל היועץ ובידי מי, כדי שכל בני
+      הבית יוכלו לראות את זה.</p>
+
+    <p><b>ההחלטה הזו היא של כל הבית.</b> הניתוח קורא את הנתונים של כולם,
+      ולכן האישור חל על המשפחה כולה ולא רק עליכם. שווה לשאול לפני.</p>
+
+    <p class="sub">אפשר לבטל בכל רגע בהגדרות. הביטול עוצר כל שליחה עתידית.</p>
+
+    <div class="toolbar" style="margin-top:20px">
+      <button class="btn" id="advAgree">אני מאשר/ת בשם המשפחה</button>
+      <button class="btn ghost" id="advNo">לא עכשיו</button>
+    </div>
+  </div>`;
+}
+function wireAdvConsent(){
+  document.getElementById('advClose').onclick=closeAdvisor;
+  document.getElementById('advNo').onclick=closeAdvisor;
+  const y=document.getElementById('advAgree');
+  y.onclick=async()=>{
+    y.disabled=true;y.textContent='רגע…';
+    const {error}=await sb.rpc('set_ai_consent',{p_household:HH.id,p_on:true});
+    if(error){y.disabled=false;y.textContent='אני מאשר/ת בשם המשפחה';
+      toast('האישור נכשל: '+error.message);return}
+    HH.aiConsent=true;
+    drawAdvisor();render();
+  };
+}
+
+function advReadyHtml(){
+  return `
+  ${advHead('🧠 יועץ הכיס','ניתוח של הנתונים שלכם')}
+  <div class="advbody">
+    <p>אני אקרא את הסכומים לפי קטגוריה, את ההוצאות של 120 הימים האחרונים
+      ואת ההוראות הקבע, ואחזור עם מה שבולט.</p>
+    <p class="sub">שווה לזכור: אני רואה רק מה שנרשם כאן. אני לא יודע במה
+      אתם עוסקים, מה הכישורים שלכם או מה השוק משלם — אז בכל מה שנוגע
+      להכנסה, מה שאוכל לתת הם רעיונות כלליים ולא ניתוח אישי.
+      זו גם לא ייעוץ פיננסי.</p>
+    <button class="btn block" id="advRun" style="margin-top:18px">התחילו בניתוח</button>
+  </div>`;
+}
+function wireAdvRun(){
+  document.getElementById('advClose').onclick=closeAdvisor;
+  document.getElementById('advRun').onclick=runAdvisor;
+}
+
+function advBusyHtml(){
+  return `
+  ${advHead('🧠 קורא את הנתונים…','')}
+  <div class="advbody">
+    <div class="advload">
+      <div class="advdots"><i></i><i></i><i></i></div>
+      <p class="sub">בדרך כלל לוקח בין 10 ל-30 שניות.</p>
+    </div>
+  </div>`;
+}
+
+function advErrorHtml(){
+  const MSG={
+    not_configured:'היועץ עדיין לא הופעל במערכת. זה משהו שמנהל המערכת צריך להשלים.',
+    no_consent:'האישור בוטל. אפשר לאשר שוב מההגדרות.',
+    rate_day:'הגעתם לתקרה של 3 ניתוחים ביום. נסו שוב מחר.',
+    rate_month:'הגעתם לתקרה החודשית של הניתוחים.',
+    upstream:'שירות הניתוח לא זמין כרגע. שווה לנסות שוב בעוד כמה דקות.',
+    parse:'התשובה חזרה במבנה שלא הצלחנו לקרוא. נסו שוב.',
+    unauthorized:'צריך להתחבר מחדש.',
+  };
+  return `
+  ${advHead('🧠 יועץ הכיס','')}
+  <div class="advbody">
+    <div class="empty" style="margin:24px 0">
+      <span class="eic">😕</span>
+      ${esc(MSG[advError]||'משהו השתבש: '+advError)}
+    </div>
+    ${advError.indexOf('rate')===0?'':'<button class="btn block" id="advRetry">ניסיון נוסף</button>'}
+  </div>`;
+}
+function wireAdvRetry(){
+  document.getElementById('advClose').onclick=closeAdvisor;
+  const r=document.getElementById('advRetry');
+  if(r)r.onclick=runAdvisor;
+}
+
+function advResultHtml(){
+  const r=advResult;
+  const money0=n=>money(n);
+  return `
+  ${advHead('🧠 מה שמצאתי','')}
+  <div class="advbody">
+    ${r.headline?`<p class="advlead">${esc(r.headline)}</p>`:''}
+
+    ${r.findings.length?`
+    <div class="advsec">
+      <div class="advseclbl"><span>📊</span>מה שראיתי בנתונים שלכם</div>
+      ${r.findings.map(f=>`
+        <div class="advfind">
+          <div class="afhead">
+            <span class="afic">${esc(f.icon||'•')}</span>
+            <b>${esc(f.title||'')}</b>
+            ${(+f.monthly)?`<span class="afmoney">${money0(+f.monthly)} בחודש</span>`:''}
+          </div>
+          ${f.evidence?`<div class="afev">${esc(f.evidence)}</div>`:''}
+          ${f.detail?`<p>${esc(f.detail)}</p>`:''}
+          ${f.action?`<p class="afact">← ${esc(f.action)}</p>`:''}
+        </div>`).join('')}
+    </div>`:''}
+
+    ${r.income_ideas&&r.income_ideas.length?`
+    <div class="advsec ideas">
+      <div class="advseclbl"><span>💡</span>רעיונות כלליים להכנסה</div>
+      <p class="sub" style="margin:0 0 12px">
+        <b>אלה לא מבוססים על הנתונים שלכם.</b> המערכת יודעת כמה נכנס ולאן
+        זה הלך, אבל לא במה אתם עוסקים ולא מה השוק משלם. קחו את זה כרשימת
+        כיוונים למחשבה, לא כהמלצה אישית.</p>
+      ${r.income_ideas.map(i=>`
+        <div class="advidea"><b>${esc(i.title||'')}</b>
+          ${i.detail?`<p>${esc(i.detail)}</p>`:''}</div>`).join('')}
+    </div>`:''}
+
+    <p class="sub advfoot">הניתוח נעשה בעזרת Claude ואינו ייעוץ פיננסי.
+      לפני החלטה משמעותית — בדקו את המספרים בעצמכם.
+      ${r.used_today?`השתמשתם ב-${r.used_today} מתוך ${r.max_per_day} ניתוחים היום.`:''}</p>
+
+    <div class="toolbar" style="margin-top:16px">
+      <button class="btn ghost" id="advAgain">ניתוח מחדש</button>
+      <button class="btn ghost" id="advDone">סגירה</button>
+    </div>
+  </div>`;
+}
+function wireAdvResult(){
+  document.getElementById('advClose').onclick=closeAdvisor;
+  document.getElementById('advDone').onclick=closeAdvisor;
+  document.getElementById('advAgain').onclick=()=>{advResult=null;runAdvisor()};
+}
+
+/* ---------- הקריאה עצמה ---------- */
+async function runAdvisor(){
+  if(advBusy)return;
+  advBusy=true;advError='';advResult=null;drawAdvisor();
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const token=session&&session.access_token;
+    if(!token)throw new Error('unauthorized');
+    const r=await fetch(SUPA.url+'/functions/v1/advisor',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({household_id:HH.id}),
+    });
+    const j=await r.json().catch(()=>({error:'parse'}));
+    if(!r.ok){advError=j.error||('http_'+r.status)}
+    else advResult=j;
+  }catch(e){
+    advError=(e&&e.message==='unauthorized')?'unauthorized':'upstream';
+  }
+  advBusy=false;drawAdvisor();
+}
+
+/* ---------- כרטיס בהגדרות ---------- */
+function advisorSettingsCard(){
+  if(!HH)return '';
+  const on=HH.aiConsent;
+  return `
+  <div class="card">
+    <h2>🧠 יועץ הכיס</h2>
+    <p class="sub">ניתוח הנתונים בעזרת Claude. כשזה כבוי, שום נתון לא נשלח לשום מקום.</p>
+    <label class="swrow">
+      <input type="checkbox" id="aiOn" ${on?'checked':''}>
+      <span><b>מותר לשלוח את נתוני המשפחה לניתוח</b><br>
+        <span class="sub">חל על כל בני הבית, כי הניתוח קורא את הנתונים של כולם.
+          יעדי חיסכון אישיים לא נשלחים גם כשזה דלוק.</span></span></label>
+    <div id="advLog" style="margin-top:12px"></div>
+  </div>`;
+}
+function wireAdvisorSettings(){
+  const c=document.getElementById('aiOn');
+  if(c)c.onchange=async()=>{
+    const want=c.checked;
+    c.disabled=true;
+    const {error}=await sb.rpc('set_ai_consent',{p_household:HH.id,p_on:want});
+    c.disabled=false;
+    if(error){c.checked=!want;toast('העדכון נכשל: '+error.message);return}
+    HH.aiConsent=want;
+    toast(want?'היועץ פעיל ✓':'היועץ כבוי — לא יישלחו נתונים');
+    render();
+  };
+  /* מי הפעיל ומתי — שקוף לכל בני הבית, לא רק למי שאישר */
+  const box=document.getElementById('advLog');
+  if(box)sb.from('advisor_runs').select('created_at,created_by,ok')
+    .eq('household_id',HH.id).order('created_at',{ascending:false}).limit(5)
+    .then(({data})=>{
+      if(!data||!data.length){box.innerHTML='<p class="sub">היועץ עוד לא הופעל.</p>';return}
+      box.innerHTML='<p class="sub">ההפעלות האחרונות:</p>'+data.map(r=>{
+        const m=memById(r.created_by);
+        const d=new Date(r.created_at);
+        return `<div class="sub" style="font-size:12.5px">• ${d.toLocaleDateString('he-IL')}
+          ${d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})} ·
+          ${esc(m?m.name:'בן משפחה')}${r.ok?'':' · נכשל'}</div>`;
+      }).join('');
+    },()=>{box.innerHTML=''});
+}
+
 /* ==================== גילוי נאות ====================
    מקור אחד לנוסח, שמוצג גם בדף הבית וגם בהגדרות.
 
@@ -2877,6 +3224,13 @@ const DISCLOSURE=[
    'ההרשאות יושבות בבסיס הנתונים עצמו (Row Level Security). גם מי שישיג את מפתח הגישה '
    +'הציבורי של האתר לא יוכל למשוך נתונים של משפחה שהוא לא חבר בה. זה נבדק אוטומטית '
    +'בכל שינוי בקוד.'],
+
+  ['🧠','יועץ הכיס — הפעם היחידה שנתונים יוצאים החוצה',
+   'כברירת מחדל שום נתון שלכם לא עוזב את השרתים שלנו. אם <b>אישרתם במפורש</b> את יועץ הכיס, '
+   +'הנתונים נשלחים לניתוח אצל Anthropic (החברה שמפעילה את Claude) — סכומים לפי קטגוריה, '
+   +'תנועות של 120 הימים האחרונים כולל התיאור שכתבתם, והוראות קבע. '
+   +'לא נשלחים מיילים, סיסמאות או יעדי חיסכון אישיים. '
+   +'האישור חל על כל המשפחה, רשום מי נתן אותו ומתי, וניתן לביטול בכל רגע בהגדרות.'],
 
   ['🚫','אין פרסום, אין מדידה, אין מעקב',
    'אין באתר פרסומות, כלי אנליטיקה, פיקסלים או עוגיות מעקב. איננו מוכרים מידע, '
@@ -2966,6 +3320,8 @@ function viewSettings(){
         גם מתוך המייל עצמו. יעדי חיסכון אישיים לא מופיעים בסיכום.</span></span></label>
   </div>
 
+  ${advisorSettingsCard()}
+
   ${disclosureCard()}
 
   ${cookieCard()}
@@ -3000,6 +3356,7 @@ async function healthReport(){
 
 function wireSettings(){
   wireCookieCard();
+  wireAdvisorSettings();
   const dg=document.getElementById('digestOn');
   if(dg)dg.onchange=async()=>{
     const want=dg.checked;
