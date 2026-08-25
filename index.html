@@ -628,6 +628,12 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
   40%{opacity:1;transform:translateY(-7px)}}
 @media(prefers-reduced-motion:reduce){.advdots i{animation:none;opacity:.6}}
 
+/* ==================== העברות ועו"ש ==================== */
+.seg.seg3 button{flex:1;min-width:0;padding-inline:6px}
+.xfernote{background:color-mix(in srgb,var(--s5) 11%,transparent);
+  border-radius:11px;padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.65}
+.titem .val.xfer{color:var(--s5)}
+
 </style>
 </head>
 <body>
@@ -1108,7 +1114,9 @@ function shiftMonth(m,d){const[y,mo]=m.split('-').map(Number);const dt=new Date(
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sc=slot=>`var(--s${((slot-1)%8)+1})`;
 const catById=id=>S.categories.find(c=>c.id===id);
-const anyCat=id=>S.categories.find(c=>c.id===id)||S.incomeCats.find(c=>c.id===id);
+const anyCat=id=>S.categories.find(c=>c.id===id)||S.incomeCats.find(c=>c.id===id)
+              ||S.transferCats.find(c=>c.id===id);
+const transCat=id=>S.transferCats.find(c=>c.id===id);
 const memById=id=>S.members.find(m=>m.id===id);
 const myMemberId=()=>{
   const id=SESSION&&SESSION.user&&SESSION.user.id;
@@ -1195,10 +1203,90 @@ function setBudgetAlways(c,v){c.budgetHistory={};c.budget=+v||0;return touch(c)}
 const monthlyAllocAt=(c,m)=>budgetAt(c,m)/Math.max(1,+c.freq||1);
 const monthlyAlloc=c=>monthlyAllocAt(c,thisMonth());
 
+/* העברה אינה הוצאה. היא יוצאת מהעו"ש אבל לא נעלמת — ולכן היא
+   נספרת בנפרד, ולא נכנסת ל-net שעליו נשענת התראת הגירעון. */
 function totals(m){const t=txOf(m);
   const income=t.filter(x=>x.type==='income').reduce((a,b)=>a+b.amount,0);
   const expense=t.filter(x=>x.type==='expense').reduce((a,b)=>a+b.amount,0);
-  return{income,expense,net:income-expense}}
+  const transfer=t.filter(x=>x.type==='transfer').reduce((a,b)=>a+b.amount,0);
+  return{income,expense,transfer,net:income-expense}}
+
+/* ---------- עו"ש ----------
+   יתרת פתיחה + כל מה שנכנס פחות כל מה שיצא. תנועות עתידיות
+   (למשל קבועות שנטענו לתחילת החודש) אינן נכללות ב"עכשיו" — הן
+   שייכות לתחזית. */
+const openingAmt=()=>+((HH&&HH.openingBalance)||0);
+const openingDay=()=>((HH&&HH.openingDate)||'');
+const hasOpening=()=>!!openingDay();
+
+function balanceUpTo(day){
+  const from=openingDay();
+  return S.tx.reduce((a,t)=>{
+    if(from&&t.date<from)return a;
+    if(day&&t.date>day)return a;
+    return a+(t.type==='income'?t.amount:-t.amount);
+  },openingAmt());
+}
+const balanceNow=()=>balanceUpTo(todayStr());
+
+/* הכנסה חודשית טיפוסית, לפי שלושת החודשים המלאים האחרונים.
+   בלי זה, תחזית שמתעלמת ממשכורת שטרם נכנסה תצעק "שלילי" בכל חודש
+   אצל מי שמקבל משכורת בסופו. */
+function typicalIncome(){
+  const m=thisMonth(), vals=[];
+  for(let i=1;i<=3;i++){
+    const mm=shiftMonth(m,-i);
+    const v=totals(mm).income;
+    if(v>0)vals.push(v);
+  }
+  if(!vals.length)return 0;
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+
+/* תחזית לסוף החודש הנוכחי. מחזירה null כשאין מספיק בסיס — עדיף
+   לא להראות מספר מאשר להראות ניחוש. */
+function forecast(){
+  if(!hasOpening())return null;
+  const m=thisMonth(), today=todayStr();
+  const d=new Date(), day=d.getDate();
+  const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  if(day<5)return null;            /* קצב של יומיים אינו קצב */
+
+  const mine=txOf(m);
+  const later=mine.filter(t=>t.date>today);
+  const laterOut=later.filter(t=>t.type!=='income').reduce((a,t)=>a+t.amount,0);
+  const laterIn =later.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
+
+  /* הוצאה משתנה צפויה להמשך החודש, לפי מה שקרה בפועל עד היום */
+  const varSoFar=mine.filter(t=>t.type==='expense'&&!t.fixed&&t.date<=today)
+    .reduce((a,t)=>a+t.amount,0);
+  const varLeft=(varSoFar/day)*(dim-day);
+
+  const gotIn=mine.filter(t=>t.type==='income'&&t.date<=today)
+    .reduce((a,t)=>a+t.amount,0);
+  const incLeft=Math.max(0,typicalIncome()-gotIn-laterIn);
+
+  const bal=balanceNow();
+  return {bal, day, dim, laterOut, laterIn, varLeft, incLeft,
+          end: bal - laterOut + laterIn + incLeft - varLeft};
+}
+
+/* מה שההתראה בודקת. מוצג רק בחודש הנוכחי — אין טעם להתריע על עבר. */
+function cashAlerts(m){
+  const out=[];
+  if(!HH||m!==thisMonth())return out;
+  if(HH.alertDeficit){
+    const t=totals(m);
+    if(t.net<0)out.push({k:'deficit',v:-t.net,
+      txt:`ההוצאות החודש גבוהות מההכנסות ב-${money(-t.net)}`});
+  }
+  if(HH.alertForecast){
+    const f=forecast();
+    if(f&&f.end<0)out.push({k:'forecast',v:-f.end,
+      txt:`לפי הקצב הנוכחי, העו"ש צפוי להסתיים בחודש במינוס ${money(-f.end)}`});
+  }
+  return out;
+}
 function spentByCat(m){const o={};txOf(m).filter(t=>t.type==='expense').forEach(t=>o[t.catId]=(o[t.catId]||0)+t.amount);return o}
 /* ניצול נמדד בחלון התדירות: קטגוריה דו-חודשית נמדדת מול הוצאות שני החודשים האחרונים */
 function usage(c,m){
@@ -1260,7 +1348,7 @@ const uid=()=>(crypto.randomUUID?crypto.randomUUID():
 const now=()=>Date.now();
 
 function emptyState(){
-  return {categories:[],incomeCats:[],members:[],tx:[],recurring:[],
+  return {categories:[],incomeCats:[],transferCats:[],members:[],tx:[],recurring:[],
           goals:[],deposits:[],loadedMonths:[],onboarded:false};
 }
 let S=emptyState();
@@ -1271,7 +1359,8 @@ const GONE=[];
 let flushTimer=null, flushing=false, lastError=null;
 
 const COLLS=[['tx','transactions'],['categories','categories'],
-             ['incomeCats','categories'],['members','household_members'],
+             ['incomeCats','categories'],['transferCats','categories'],
+             ['members','household_members'],
              ['recurring','recurring'],['goals','goals'],['deposits','goal_deposits']];
 function collOf(o){
   for(const [k,t] of COLLS) if(S[k].indexOf(o)>=0) return {coll:k,table:t};
@@ -1380,7 +1469,9 @@ const toRow={
     archived:!!o.archived,created_by:o.createdBy||SESSION.user.id}),
   goal_deposits:o=>({id:o.id,goal_id:o.goalId,household_id:HH.id,amount:+o.amount,
     occurred_on:o.date,note:o.note||null,created_by:o.createdBy||SESSION.user.id}),
-  categories:o=>({id:o.id,household_id:HH.id,kind:o.kind||(S.incomeCats.indexOf(o)>=0?'income':'expense'),
+  categories:o=>({id:o.id,household_id:HH.id,
+    kind:o.kind||(S.incomeCats.indexOf(o)>=0?'income'
+                 :S.transferCats.indexOf(o)>=0?'transfer':'expense'),
     name:o.name,icon:o.icon||'📌',budget:+o.budget||0,freq:Math.max(1,+o.freq||1),slot:+o.slot||1,
     budget_history:o.budgetHistory||{}}),
   household_members:o=>({household_id:HH.id,user_id:o.id,display_name:o.name,slot:+o.slot||1}),
@@ -1455,7 +1546,8 @@ async function loadHousehold(){
   const me=SESSION&&SESSION.user&&SESSION.user.id;
   const {data:mine,error:e1}=await sb.from('household_members')
     .select('household_id,display_name,role,slot,joined_at,weekly_digest,'
-           +'households(id,name,onboarded,auto_fixed,ai_consent)')
+           +'households(id,name,onboarded,auto_fixed,ai_consent,'
+           +'opening_balance,opening_date,alert_deficit,alert_forecast)')
     .eq('user_id',me);
   if(e1)throw e1;
   if(!mine||!mine.length){HH=null;return null}
@@ -1474,6 +1566,8 @@ async function loadHousehold(){
   const h=pick.households||{};
   HH={id:pick.household_id,name:h.name||'המשפחה שלי',onboarded:!!h.onboarded,
       autoFixed:h.auto_fixed!==false, aiConsent:!!h.ai_consent,
+      openingBalance:+h.opening_balance||0, openingDate:h.opening_date||'',
+      alertDeficit:h.alert_deficit!==false, alertForecast:h.alert_forecast!==false,
       role:pick.role,others:mine.length-1};
   digestOn=!!pick.weekly_digest;
   return HH;
@@ -1492,8 +1586,9 @@ async function loadAll(){
   ]);
   for(const r of [cats,txs,recs,mems,months]) if(r.error) throw r.error;
   const all=(cats.data||[]).map(fromRow.category);
-  S.categories = all.filter(c=>c.kind==='expense').sort((a,b)=>a.slot-b.slot);
-  S.incomeCats = all.filter(c=>c.kind==='income');
+  S.categories   = all.filter(c=>c.kind==='expense').sort((a,b)=>a.slot-b.slot);
+  S.incomeCats   = all.filter(c=>c.kind==='income');
+  S.transferCats = all.filter(c=>c.kind==='transfer').sort((a,b)=>a.slot-b.slot);
   S.tx         = (txs.data||[]).map(fromRow.transactions);
   S.recurring  = (recs.data||[]).map(fromRow.recurring);
   S.members    = (mems.data||[]).map(fromRow.household_members).sort((a,b)=>a.slot-b.slot);
@@ -1558,6 +1653,8 @@ const DEFAULT_CATS=[
   ['👕','ביגוד והנעלה',600,5,1], ['🐷','חיסכון והשקעות',2000,6,1], ['✨','שונות',500,7,1]
 ];
 const DEFAULT_INCOME=[['💼','משכורת'],['🏦','קצבאות'],['➕','הכנסה נוספת']];
+/* העברות — לא הוצאות. הכסף יוצא מהעו"ש אבל נשאר שלכם. */
+const DEFAULT_TRANSFER=[['🐷','חיסכון'],['📈','מניות והשקעות']];
 
 async function createHousehold(name,displayName){
   const hid=uid();
@@ -1569,7 +1666,9 @@ async function createHousehold(name,displayName){
   const rows=DEFAULT_CATS.map(([icon,n,b,slot,freq])=>
       ({id:uid(),household_id:hid,kind:'expense',icon,name:n,budget:b,slot,freq}))
     .concat(DEFAULT_INCOME.map(([icon,n],i)=>
-      ({id:uid(),household_id:hid,kind:'income',icon,name:n,budget:0,slot:i+1,freq:1})));
+      ({id:uid(),household_id:hid,kind:'income',icon,name:n,budget:0,slot:i+1,freq:1})))
+    .concat(DEFAULT_TRANSFER.map(([icon,n],i)=>
+      ({id:uid(),household_id:hid,kind:'transfer',icon,name:n,budget:0,slot:i+1,freq:1})));
   const {error:e3}=await sb.from('categories').insert(rows);
   if(e3)throw e3;
   HH={id:hid,name:name||'המשפחה שלי'};
@@ -2047,6 +2146,10 @@ function viewDash(){
     </div>
   </div>
 
+  ${cashCard()}
+
+  ${cashAlertBar(month)}
+
   ${backup}${bar}${list}
 
   ${advisorCard()}
@@ -2081,6 +2184,52 @@ function viewDash(){
   </div>`;
 }
 
+/* ---------- עו"ש ----------
+   מוצג רק אחרי שהוזנה יתרת פתיחה. בלי יתרת פתיחה המספר הוא
+   "כמה השתנה מאז שהתחלנו לרשום", וזה לא עו"ש — זה משהו אחר
+   שקל לטעות ולקרוא לו עו"ש. */
+function cashCard(){
+  if(!HH)return '';
+  if(!hasOpening())return `
+  <div class="card">
+    <h2>🏦 יתרת עו"ש</h2>
+    <p class="sub">כדי להציג יתרה אמיתית צריך להזין פעם אחת את היתרה שיש
+      בבנק ואת התאריך שאליו היא נכונה. משם המערכת מעדכנת אותה מכל תנועה.</p>
+    <button class="btn ghost" id="goOpening">הזנת יתרת פתיחה</button>
+  </div>`;
+
+  const bal=balanceNow(), f=forecast();
+  const t=totals(month);
+  const col=bal<0?'var(--critical)':'var(--good-ink)';
+  return `
+  <div class="card">
+    <h2>🏦 יתרת עו"ש</h2>
+    <p class="sub">מעודכן לפי כל מה שנרשם עד היום · יתרת פתיחה ${money(openingAmt())}
+      מ-${openingDay().slice(8,10)}/${openingDay().slice(5,7)}/${openingDay().slice(0,4)}</p>
+    <div class="big" style="color:${col};margin:2px 0 6px">${money(bal)}</div>
+    ${f?`<p class="sub" style="margin:0">
+      צפי לסוף ${monthLabel(thisMonth())}:
+      <b class="${f.end<0?'neg':'pos'}">${money(f.end)}</b>
+      <br><span style="font-size:12px">מניח שיירדו עוד ${money(f.laterOut)} שכבר רשומים,
+      שההוצאה המשתנה תימשך באותו קצב (${money(f.varLeft)})${f.incLeft>0
+        ?`, ושתיכנס עוד הכנסה של ${money(f.incLeft)} לפי החודשים הקודמים`:''}.</span></p>`:''}
+    ${t.transfer?`<div class="split" style="margin-top:14px">
+      <div class="mini"><div class="l"><i class="dot" style="background:var(--s5)"></i>הועבר לחיסכון החודש</div>
+        <div class="v">${money(t.transfer)}</div></div>
+    </div>`:''}
+  </div>`;
+}
+
+/* פס ההתראה. שני התנאים נפרדים כי הם אומרים דברים שונים: גירעון הוא
+   מה שקרה, תחזית היא לאן זה הולך. */
+function cashAlertBar(m){
+  const al=cashAlerts(m);
+  if(!al.length)return '';
+  return `<div class="alertlist" style="margin-bottom:14px">${al.map(a=>`
+    <div class="row crit"><span>${a.k==='deficit'?'⛔':'📉'}</span>
+      <span>${esc(a.txt)}</span></div>`).join('')}</div>`;
+}
+
 function ringSvg(pct,color){
   const r=46,C=2*Math.PI*r,p=Math.min(pct,100);
   return `<div class="ring"><svg width="112" height="112" viewBox="0 0 112 112" role="img" aria-label="ניצול ${Math.round(pct)} אחוז מהתקציב">
@@ -2112,7 +2261,7 @@ function txList(list){
       <span class="av">${c?c.icon:'❓'}</span>
       <span class="mid"><span class="t1">${t.note?esc(t.note):(c?esc(c.name):'תנועה')}</span>
         <span class="t2">${c&&t.note?esc(c.name)+' ·':''} ${avatar(m)} ${m?esc(m.name):'—'} · ${t.date.slice(8,10)}/${t.date.slice(5,7)}${t.fixed?' <span class="pin">קבועה</span>':''}${t.splitId?' <span class="pin">חלק מפיצול</span>':''}</span></span>
-      <span class="val ${t.type==='income'?'pos':''}"><bdi dir="ltr">${t.type==='income'?'+':'−'}${money(t.amount)}</bdi></span>
+      <span class="val ${t.type==='income'?'pos':t.type==='transfer'?'xfer':''}"><bdi dir="ltr">${t.type==='income'?'+':t.type==='transfer'?'↔':'−'}${money(t.amount)}</bdi></span>
       <span class="chev">‹</span></button>`}).join('')}</div>`;
 }
 
@@ -2177,6 +2326,9 @@ function wireTxClicks(){
 }
 function wireDash(){
   wireAdvisorCard();
+  /* לא לקרוא למשתנה go — הוא היה מסתיר את פונקציית הניווט הגלובלית */
+  const ob=document.getElementById('goOpening');
+  if(ob)ob.onclick=()=>go('settings');
   const at=document.getElementById('alertToggle');if(at)at.onclick=()=>{alertsOpen=!alertsOpen;render()};
   const tc=document.getElementById('toggleCats');if(tc)tc.onclick=()=>{showAllCats=!showAllCats;render()};
   const al=document.getElementById('allTx');if(al)al.onclick=()=>go('tx');
@@ -2239,33 +2391,39 @@ function closeSheet(){
   document.getElementById('sheet').classList.remove('on');
   document.body.style.overflow='';
 }
+const catsOfType=t=>t==='income'?S.incomeCats:t==='transfer'?S.transferCats:S.categories;
 function drawSheet(){
-  const cats=draft.type==='expense'?S.categories:S.incomeCats;
+  const cats=catsOfType(draft.type);
   if(!cats.find(c=>c.id===draft.catId))draft.catId=(cats[0]||{}).id||'';
   const amt=String(draft.amount||''), disp=amt?nf.format(+amt):'0';
   const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
   document.getElementById('sheetTitle').textContent=draft.id?'עריכת תנועה':'רישום מהיר';
   document.getElementById('sheetBody').innerHTML=`
     <div class="amtbox"><span class="val ${amt?'':'zero'}"><span class="cur">₪</span>${disp}</span></div>
-    <div class="seg" id="sType" style="margin-bottom:14px">
+    <div class="seg seg3" id="sType" style="margin-bottom:14px">
       <button data-v="expense" aria-pressed="${draft.type==='expense'}">↓ הוצאה</button>
-      <button data-v="income" aria-pressed="${draft.type==='income'}">↑ הכנסה</button></div>
+      <button data-v="income" aria-pressed="${draft.type==='income'}">↑ הכנסה</button>
+      <button data-v="transfer" aria-pressed="${draft.type==='transfer'}">↔ העברה</button></div>
     <div class="keypad" id="pad">
       ${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}
       <button data-k="00">00</button><button data-k="0">0</button><button data-k="del">⌫</button></div>
-    <div class="fieldlbl">קטגוריה</div>
+    ${draft.type==='transfer'?`<p class="sub xfernote">↔ העברה היא כסף שעובר מכיס לכיס —
+      לחיסכון, למניות. הוא יורד מהעו"ש, אבל אינו נספר כהוצאה ואינו פוגע בתקציב.</p>`:''}
+    <div class="fieldlbl">${draft.type==='transfer'?'לאן':'קטגוריה'}</div>
     <div class="catgrid ${splitOn?'hide':''}" id="sCats">${cats.map(c=>
       `<button data-id="${c.id}" aria-pressed="${c.id===draft.catId}"><span class="ci">${c.icon}</span>${esc(c.name)}</button>`).join('')}
       <button class="catnew" data-new="1" aria-pressed="false"><span class="ci">＋</span>חדשה</button></div>
     ${newCatOpen?`<div class="newcat" id="sNewCat">
       ${emojiBtn('ncIcon',newCatIcon,'בחירת אייקון')}
-      <input id="ncName" placeholder="${draft.type==='expense'?'שם הקטגוריה':'שם מקור ההכנסה'}" value="${esc(newCatName)}">
+      <input id="ncName" placeholder="${draft.type==='expense'?'שם הקטגוריה'
+        :draft.type==='transfer'?'שם היעד (למשל: קרן השתלמות)':'שם מקור ההכנסה'}" value="${esc(newCatName)}">
       ${draft.type==='expense'?`<input id="ncBud" class="ncbud" type="number" inputmode="decimal" placeholder="תקציב" value="${newCatBud||''}">`:''}
       <button class="btn" id="ncAdd">הוספה</button>
       <button class="btn ghost" id="ncCancel">ביטול</button>
     </div>`:''}
     ${splitUi()}
-    <div class="fieldlbl">${draft.type==='expense'?'מי שילם':'מי קיבל'}</div>
+    <div class="fieldlbl">${draft.type==='expense'?'מי שילם'
+      :draft.type==='transfer'?'מי העביר':'מי קיבל'}</div>
     <div class="chipsel" id="sMem">${S.members.map(m=>
       `<button data-id="${m.id}" aria-pressed="${!draft.memberLabel&&m.id===draft.memberId}">${avatar(m)}${esc(m.name)}</button>`).join('')}
       ${labelList().map((n,i)=>
@@ -2407,10 +2565,10 @@ function submitNewCat(){
   const name=(newCatName||'').trim();
   if(!name){toast('צריך שם לקטגוריה');return}
   const icon=emojiValue('ncIcon');
-  const kind=draft.type==='expense'?'expense':'income';
-  const before=(kind==='income'?S.incomeCats:S.categories).length;
+  const kind=draft.type;
+  const before=catsOfType(kind).length;
   const c=addCategory(kind,name,icon,kind==='expense'?(+newCatBud||0):0);
-  const isNew=(kind==='income'?S.incomeCats:S.categories).length>before;
+  const isNew=catsOfType(kind).length>before;
   draft.catId=c.id;
   resetNewCat();
   save();drawSheet();
@@ -2517,8 +2675,8 @@ function viewTx(){
     <div class="toolbar">
       <select id="flPeriod" style="width:auto">${PERIODS.map(([v,l])=>
         `<option value="${v}" ${txFilter.period===v?'selected':''}>${l}</option>`).join('')}</select>
-      <select id="flType" style="width:auto"><option value="">הכול</option><option value="expense" ${txFilter.type==='expense'?'selected':''}>הוצאות</option><option value="income" ${txFilter.type==='income'?'selected':''}>הכנסות</option></select>
-      <select id="flCat" style="width:auto"><option value="">כל הקטגוריות</option>${S.categories.concat(S.incomeCats).map(c=>`<option value="${c.id}" ${txFilter.cat===c.id?'selected':''}>${c.icon} ${esc(c.name)}</option>`).join('')}</select>
+      <select id="flType" style="width:auto"><option value="">הכול</option><option value="expense" ${txFilter.type==='expense'?'selected':''}>הוצאות</option><option value="income" ${txFilter.type==='income'?'selected':''}>הכנסות</option><option value="transfer" ${txFilter.type==='transfer'?'selected':''}>העברות</option></select>
+      <select id="flCat" style="width:auto"><option value="">כל הקטגוריות</option>${S.categories.concat(S.incomeCats,S.transferCats).map(c=>`<option value="${c.id}" ${txFilter.cat===c.id?'selected':''}>${c.icon} ${esc(c.name)}</option>`).join('')}</select>
       <select id="flMem" style="width:auto"><option value="">כולם</option>${S.members.map(m=>`<option value="${m.id}" ${txFilter.member===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}${labelList().map(n=>`<option value="lbl:${esc(n)}" ${txFilter.member==='lbl:'+n?'selected':''}>${esc(n)}</option>`).join('')}</select>
       ${filtered?`<button class="btn ghost sm" id="flClear">ניקוי ✕</button>`:''}
     </div>
@@ -2580,10 +2738,11 @@ function wireTx(){
    יצירת קטגוריה יושבת כאן ולא בשני מקומות, כי מוסיפים אותה גם ממסך
    התקציב וגם תוך כדי רישום הוצאה — ושתי הדרכים חייבות ליצור אותו דבר. */
 function addCategory(kind,name,icon,budget){
-  const list=kind==='income'?S.incomeCats:S.categories;
+  const list=kind==='income'?S.incomeCats:kind==='transfer'?S.transferCats:S.categories;
   const exists=list.find(c=>c.name.trim()===name.trim());
   if(exists)return exists;                 /* לא יוצרים כפילות בשם */
-  const c=touch({id:uid(),kind,name:name.trim(),icon:icon||(kind==='income'?'💰':'📌'),
+  const c=touch({id:uid(),kind,name:name.trim(),
+    icon:icon||(kind==='income'?'💰':kind==='transfer'?'🐷':'📌'),
     budget:+budget||0,freq:1,slot:list.length+1});
   list.push(c);
   return c;
@@ -2623,6 +2782,25 @@ function viewBudget(){
     </div>
   </div>
   <div class="card">
+    <h2>↔️ חיסכון והשקעות</h2>
+    <p class="sub">כסף שעובר לכאן יורד מהעו"ש אבל <b>אינו נספר כהוצאה</b> —
+      הוא לא פוגע בתקציב, לא בקצב, ולא מפעיל את התראת התזרים.
+      ${(()=>{const y=S.tx.filter(t=>t.type==='transfer'&&t.date>=thisMonth().slice(0,4)+'-01-01')
+        .reduce((a,t)=>a+t.amount,0);
+        return y?`מתחילת השנה הועברו ${money(y)}.`:''})()}</p>
+    <div class="chipsel" style="margin-bottom:13px">${S.transferCats.map(i=>{
+      const tot=S.tx.filter(t=>t.type==='transfer'&&t.catId===i.id).reduce((a,t)=>a+t.amount,0);
+      return `<span style="display:inline-flex;align-items:center;gap:7px;background:var(--plane);border:1px solid var(--ring);border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:600">
+        ${i.icon} ${esc(i.name)}${tot?` <b style="color:var(--muted);font-weight:600">· ${money(tot)}</b>`:''}
+        <b class="delXfer" data-id="${i.id}" style="color:var(--muted);cursor:pointer">✕</b></span>`}).join('')}</div>
+    <div class="toolbar">
+      ${emojiBtn('newXferIcon','🐷','בחירת אייקון')}
+      <input id="newXfer" placeholder="יעד חדש (למשל: קרן השתלמות)" style="max-width:230px">
+      <button class="btn" id="addXfer">הוספה</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>💰 מקורות הכנסה</h2>
     <p class="sub">הקטגוריות שמופיעות כשמזינים הכנסה</p>
     <div class="chipsel" style="margin-bottom:13px">${S.incomeCats.map(i=>
@@ -2654,6 +2832,16 @@ function wireBudget(){
     addCategory('income',n,emojiValue('newIncIcon'),0);
     save();render();toast('מקור ההכנסה נוסף ✓')};
   document.querySelectorAll('.delInc').forEach(b=>b.onclick=()=>{removeRec('incomeCats',b.dataset.id);save();render()});
+  const ax=document.getElementById('addXfer');
+  if(ax)ax.onclick=()=>{
+    const n=document.getElementById('newXfer').value.trim();if(!n)return;
+    addCategory('transfer',n,emojiValue('newXferIcon'),0);
+    save();render();toast('נוסף ✓')};
+  document.querySelectorAll('.delXfer').forEach(b=>b.onclick=()=>{
+    const c=Object.assign({},S.transferCats.find(x=>x.id===b.dataset.id));
+    removeRec('transferCats',b.dataset.id);save();render();
+    toast(`"${c.name}" נמחק`,{label:'ביטול',fn:()=>{undoRemove('transferCats',c);render()}});
+  });
 }
 
 /* ==================== קבועות ==================== */
@@ -3429,6 +3617,38 @@ function viewSettings(){
         גם מתוך המייל עצמו. יעדי חיסכון אישיים לא מופיעים בסיכום.</span></span></label>
   </div>
 
+  <div class="card">
+    <h2>🏦 יתרת עו"ש והתראות</h2>
+    <p class="sub">המערכת מכירה רק מה שנרשם בה. כדי שהעו"ש יהיה מספר אמיתי
+      שאפשר להשוות לבנק, מזינים פעם אחת את היתרה ואת התאריך שאליו היא נכונה.</p>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
+      <label class="f">יתרה בבנק
+        <input id="obAmt" type="number" inputmode="decimal" value="${HH?(+HH.openingBalance||''):''}"></label>
+      <label class="f">נכון לתאריך
+        <input id="obDate" type="date" value="${HH?(HH.openingDate||''):''}"></label>
+    </div>
+    <div class="toolbar" style="margin-top:10px">
+      <button class="btn" id="obSave">שמירה</button>
+      ${HH&&HH.openingDate?`<button class="btn ghost" id="obClear">הסרה</button>`:''}
+    </div>
+    ${HH&&HH.openingDate?`<p class="sub" style="margin:10px 0 0">
+      היתרה כרגע: <b>${money(balanceNow())}</b>. תנועות שנרשמו לפני
+      ${HH.openingDate.slice(8,10)}/${HH.openingDate.slice(5,7)} אינן נספרות בה.</p>`:''}
+
+    <div style="margin-top:16px;display:grid;gap:10px">
+      <label class="swrow">
+        <input type="checkbox" id="alDef" ${HH&&HH.alertDeficit?'checked':''}>
+        <span><b>התראה כשהחודש נכנס לגירעון</b><br>
+          <span class="sub">ההוצאות עברו את ההכנסות, גם אם עוד יש כסף בעו"ש.
+            העברות לחיסכון אינן נחשבות הוצאה ולא יפעילו את זה.</span></span></label>
+      <label class="swrow">
+        <input type="checkbox" id="alFc" ${HH&&HH.alertForecast?'checked':''}>
+        <span><b>התראה כשהתחזית לסוף החודש שלילית</b><br>
+          <span class="sub">לפי הקצב בפועל, הקבועות שטרם ירדו וההכנסה שטרם
+            התקבלה. מתריע מוקדם, לפני שזה קורה. דורש יתרת פתיחה.</span></span></label>
+    </div>
+  </div>
+
   ${advisorSettingsCard()}
 
   ${disclosureCard()}
@@ -3466,6 +3686,7 @@ async function healthReport(){
 function wireSettings(){
   wireCookieCard();
   wireAdvisorSettings();
+  wireCashSettings();
   const dg=document.getElementById('digestOn');
   if(dg)dg.onchange=async()=>{
     const want=dg.checked;
@@ -3541,6 +3762,44 @@ function wireSettings(){
   if(eb)eb.onclick=()=>exportBackup();
   const ec=document.getElementById('expCsv');
   if(ec)ec.onclick=()=>exportCsv();
+}
+
+async function saveHouse(patch,ok){
+  Object.assign(HH,patch.local||{});
+  const {error}=await sb.from('households').update(patch.row).eq('id',HH.id);
+  if(error){toast('העדכון נכשל: '+error.message);return false}
+  if(ok)toast(ok);
+  return true;
+}
+
+function wireCashSettings(){
+  const sv=document.getElementById('obSave');
+  if(sv)sv.onclick=async()=>{
+    const amt=+document.getElementById('obAmt').value||0;
+    const dt=document.getElementById('obDate').value||'';
+    if(!dt){toast('צריך גם תאריך, אחרת אי אפשר לדעת ממתי לספור');return}
+    sv.disabled=true;
+    const okd=await saveHouse({row:{opening_balance:amt,opening_date:dt},
+      local:{openingBalance:amt,openingDate:dt}},'היתרה נשמרה ✓');
+    sv.disabled=false;
+    if(okd)render();
+  };
+  const cl=document.getElementById('obClear');
+  if(cl)cl.onclick=async()=>{
+    if(!confirm('להסיר את יתרת הפתיחה? העו"ש יפסיק להיות מוצג.'))return;
+    if(await saveHouse({row:{opening_balance:0,opening_date:null},
+      local:{openingBalance:0,openingDate:''}},'הוסרה'))render();
+  };
+  const d=document.getElementById('alDef');
+  if(d)d.onchange=async()=>{
+    if(!await saveHouse({row:{alert_deficit:d.checked},local:{alertDeficit:d.checked}},
+      d.checked?'ההתראה פעילה ✓':'ההתראה כבויה'))d.checked=!d.checked;
+  };
+  const f=document.getElementById('alFc');
+  if(f)f.onchange=async()=>{
+    if(!await saveHouse({row:{alert_forecast:f.checked},local:{alertForecast:f.checked}},
+      f.checked?'ההתראה פעילה ✓':'ההתראה כבויה'))f.checked=!f.checked;
+  };
 }
 
 function dl(name,txt,type){const a=document.createElement('a');
