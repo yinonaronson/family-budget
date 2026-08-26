@@ -1658,7 +1658,7 @@ async function loadHousehold(){
   const me=SESSION&&SESSION.user&&SESSION.user.id;
   const {data:mine,error:e1}=await sb.from('household_members')
     .select('household_id,display_name,role,slot,joined_at,weekly_digest,'
-           +'households(id,name,onboarded,auto_fixed,ai_consent,'
+           +'households(id,name,onboarded,auto_fixed,ai_consent,ai_assets_consent,'
            +'opening_balance,opening_date,alert_deficit,alert_forecast)')
     .eq('user_id',me);
   if(e1)throw e1;
@@ -1678,6 +1678,7 @@ async function loadHousehold(){
   const h=pick.households||{};
   HH={id:pick.household_id,name:h.name||'המשפחה שלי',onboarded:!!h.onboarded,
       autoFixed:h.auto_fixed!==false, aiConsent:!!h.ai_consent,
+      aiAssetsConsent:!!h.ai_assets_consent,
       openingBalance:+h.opening_balance||0, openingDate:h.opening_date||'',
       alertDeficit:h.alert_deficit!==false, alertForecast:h.alert_forecast!==false,
       role:pick.role,others:mine.length-1};
@@ -3292,6 +3293,11 @@ function wireGoals(){
 const QUOTE_TTL=10*60*1000;        /* מחירים מתעכבים ממילא */
 const QUOTE_TIMEOUT=25000;
 let quoteAt=0, quoteBusy=false, quoteErr='', quoteAbort=null, quoteRun=0;
+/* מה שהספק סיפר על כל נייר — סוג המכשיר, הבורסה, השם המלא, טווח
+   52 השבועות. יושב בזיכרון בלבד ולא בשרת: זה מידע ציבורי על
+   הנייר, לא נתון של המשפחה. משמש כדי שניתוח התיק יישען על עובדות
+   שנמשכו ולא על מה שמודל זוכר על סימול. */
+const QMETA={};
 let astEdit=null, astType='stock', astErr='';
 
 const stockAssets=()=>S.assets.filter(a=>a.kind==='stock'&&a.symbol);
@@ -3332,6 +3338,8 @@ async function refreshQuotes(force){
       const q=j.quotes[a.symbol.trim().toUpperCase()];
       if(!q)return;
       a.lastPrice=+q.price;a.lastCcy=q.ccy||'USD';a.lastPriceAt=j.at||new Date().toISOString();
+      QMETA[a.symbol.trim().toUpperCase()]={name:q.name||'',type:q.type||'',
+        exch:q.exch||'',hi52:q.hi52==null?null:+q.hi52,lo52:q.lo52==null?null:+q.lo52};
       touch(a);changed++;
     });
     if(changed)save();
@@ -3776,6 +3784,25 @@ function advResultHtml(){
         </div>`).join('')}
     </div>`:''}
 
+    ${r.portfolio&&r.portfolio.length?`
+    <div class="advsec">
+      <div class="advseclbl"><span>💼</span>מבנה תיק הנכסים</div>
+      <p class="sub" style="margin:0 0 12px">
+        <b>זה תיאור, לא ייעוץ.</b> מה שכתוב כאן הוא מה שרואים במספרים —
+        כמה יושב איפה, ובאיזה מטבע. אין כאן המלצה לקנות, למכור או להחליף,
+        ואין הערכה אם נייר יקר או זול. ההחלטה מה מתאים לכם היא שלכם,
+        ולפניה כדאי להתייעץ עם מי שמורשה לייעץ.</p>
+      ${r.portfolio.map(f=>`
+        <div class="advfind">
+          <div class="afhead">
+            <span class="afic">${esc(f.icon||'•')}</span>
+            <b>${esc(f.title||'')}</b>
+          </div>
+          ${f.evidence?`<div class="afev">${esc(f.evidence)}</div>`:''}
+          ${f.detail?`<p>${esc(f.detail)}</p>`:''}
+        </div>`).join('')}
+    </div>`:''}
+
     ${r.income_ideas&&r.income_ideas.length?`
     <div class="advsec ideas">
       <div class="advseclbl"><span>💡</span>רעיונות כלליים להכנסה</div>
@@ -3809,6 +3836,45 @@ function wireAdvResult(){
    שוב. מה שחייב להישאר בשרת — מי אתה, אם אישרתם, תקרת השימוש ומעקות
    הניסוח — נשאר שם, ולכן אין כאן מה לעקוף. */
 const ADV_TX_DAYS=90, ADV_TX_CAP=250;
+
+/* תיק הנכסים כפי שהוא נשלח לניתוח.
+   שני עקרונות: (1) רק מה שנמדד — שווי, עלות, סוג, מטבע. אין כאן
+   שדה "מה דעתך". (2) כל מה שמתאר את הנייר עצמו מגיע ממה שנמשך
+   מהספק (QMETA) ולא מהשם שהמשתמש נתן, כדי שהמודל לא ינחש. */
+function portfolioPayload(){
+  const tot=assetsTotal();
+  return {
+    total_value: Math.round(tot),
+    cash_balance: hasOpening()?Math.round(balanceNow()):null,
+    holdings: S.assets.map(a=>{
+      const v=assetValue(a), c=assetCost(a);
+      const sym=(a.symbol||'').trim().toUpperCase();
+      const md=QMETA[sym]||{};
+      return {
+        label:a.name,
+        kind:a.kind,                       /* stock = נסחר, holding = סכום שהוזן */
+        symbol:sym||null,
+        instrument_name:md.name||null,     /* השם כפי שהספק מחזיר אותו */
+        instrument_type:md.type||null,     /* EQUITY / ETF / CRYPTOCURRENCY */
+        exchange:md.exch||null,
+        quote_currency:a.kind==='stock'?(a.lastCcy||null):'ILS',
+        units:a.kind==='stock'?+a.qty:null,
+        value_ils:v==null?null:Math.round(v),
+        pct_of_portfolio:(v==null||!tot)?null:Math.round(v/tot*1000)/10,
+        deposited_ils:c>0?Math.round(c):null,
+        priced:v!=null,
+      };
+    }),
+    notes:[
+      'value_ils של נכס מסוג stock מחושב מכמות × מחיר שוק אחרון × שער המטבע.',
+      'נכס עם priced=false אינו נספר בסכומים.',
+      'deposited_ils הוא מה שהמשתמש דיווח שהפקיד. null פירושו שלא נמסר,',
+      'ואז אין להסיק ממנו רווח או הפסד.',
+      'instrument_type ו-instrument_name נמשכו מספק שערים חיצוני.',
+      'אם הם null, אינך יודע מה הנייר מחזיק — אל תניח.',
+    ],
+  };
+}
 
 function advPayload(){
   const m=thisMonth(), d=new Date();
@@ -3849,6 +3915,10 @@ function advPayload(){
     family_goals:S.goals.filter(g=>!g.ownerId).map(g=>({name:g.name,
       target:+g.target,saved:Math.round(goalSaved(g)),by:g.date||null})),
     recent_transactions:recent,
+    /* נשלח רק אחרי אישור נפרד. השרת בודק את זה שוב ומסיר אם לא —
+       הדגל שבדפדפן אינו ראיה. */
+    portfolio: HH.aiAssetsConsent ? portfolioPayload() : undefined,
+    net_worth: HH.aiAssetsConsent ? (netWorth()==null?null:Math.round(netWorth())) : undefined,
     notes_for_you:[
       'רשימת התנועות המפורטת מכסה '+ADV_TX_DAYS+' ימים אחרונים ומוגבלת ל-'
         +ADV_TX_CAP+' רשומות.',
@@ -3873,6 +3943,10 @@ async function runAdvisor(){
   /* בלי פסק זמן, חיבור שנתקע משאיר את הספינר מסתובב לנצח */
   const timer=setTimeout(()=>{if(advAbort)advAbort.abort()},ADV_TIMEOUT);
   try{
+    /* בלי מחירים טריים, נכס נסחר נשלח בלי שווי ו-QMETA ריק —
+       והמודל היה מקבל סימול בלי שום עובדה עליו. */
+    if(HH.aiAssetsConsent&&typeof refreshQuotes==='function')
+      await refreshQuotes(false);
     const {data:{session}}=await sb.auth.getSession();
     const token=session&&session.access_token;
     if(!token)throw new Error('unauthorized');
@@ -3894,6 +3968,7 @@ async function runAdvisor(){
     else if(!j||!Array.isArray(j.findings))advError='parse';
     else advResult={headline:j.headline||'',findings:j.findings,
       income_ideas:Array.isArray(j.income_ideas)?j.income_ideas:[],
+      portfolio:Array.isArray(j.portfolio)?j.portfolio:[],
       used_today:j.used_today,max_per_day:j.max_per_day};
   }catch(e){
     if(e&&e.name==='AbortError')advError='timeout';
@@ -3926,6 +4001,16 @@ function advisorSettingsCard(){
       <span><b>מותר לשלוח את נתוני המשפחה לניתוח</b><br>
         <span class="sub">חל על כל בני הבית, כי הניתוח קורא את הנתונים של כולם.
           יעדי חיסכון אישיים לא נשלחים גם כשזה דלוק.</span></span></label>
+    ${/* מתג נפרד ולא הרחבה של הקודם: מי שהסכים שיקראו כמה הוציא
+         בסופר לא הסכים בכך שידווחו כמה מניות יש לו ובמה. */''}
+    <label class="swrow" style="margin-top:10px">
+      <input type="checkbox" id="aiAssetsOn" ${HH.aiAssetsConsent?'checked':''} ${on?'':'disabled'}>
+      <span><b>לשלוח גם את תיק הנכסים</b><br>
+        <span class="sub">מוסיף לניתוח פרק על <b>מבנה</b> התיק: ריכוזיות, פיזור,
+          חשיפה למטבע וכמה מהשווי נטו יושב בנכס אחד.
+          <b>אין כאן ייעוץ השקעות</b> — היועץ מתאר מה יש, ואינו ממליץ לקנות,
+          למכור או להחליף. אישור נפרד בכוונה.
+          ${on?'':'צריך קודם לאשר את הניתוח עצמו.'}</span></span></label>
     <div id="advLog" style="margin-top:12px"></div>
   </div>`;
 }
@@ -3938,7 +4023,24 @@ function wireAdvisorSettings(){
     c.disabled=false;
     if(error){c.checked=!want;toast('העדכון נכשל: '+error.message);return}
     HH.aiConsent=want;
+    /* כיבוי הראשי מכבה גם את הנכסים. אחרת היה נשאר אישור פעיל
+       לנתון רגיש יותר, מתחת למתג שנראה כבוי. */
+    if(!want&&HH.aiAssetsConsent){
+      await sb.rpc('set_ai_assets_consent',{p_household:HH.id,p_on:false});
+      HH.aiAssetsConsent=false;
+    }
     toast(want?'היועץ פעיל ✓':'היועץ כבוי — לא יישלחו נתונים');
+    render();
+  };
+  const ca=document.getElementById('aiAssetsOn');
+  if(ca)ca.onchange=async()=>{
+    const want=ca.checked;
+    ca.disabled=true;
+    const {error}=await sb.rpc('set_ai_assets_consent',{p_household:HH.id,p_on:want});
+    ca.disabled=false;
+    if(error){ca.checked=!want;toast('העדכון נכשל: '+error.message);return}
+    HH.aiAssetsConsent=want;
+    toast(want?'תיק הנכסים ייכלל בניתוח ✓':'תיק הנכסים לא ייכלל');
     render();
   };
   /* מי הפעיל ומתי — שקוף לכל בני הבית, לא רק למי שאישר */
