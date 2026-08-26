@@ -1355,9 +1355,33 @@ function assetValue(a){
   }
   return (+a.valueBase||0)+assetDeposits(a,a.valueDate);
 }
-/* כמה כסף הוכנס בסך הכול. 0 פירושו "לא נאמר לנו", ואז לא מציגים
-   תשואה — עדיף בלי מספר מאשר עם מספר שממציא רווח. */
-function assetCost(a){return (+a.costBase||0)+assetDeposits(a,'')}
+/* כמה כסף הוכנס בסך הכול, בשקלים. 0 פירושו "לא נאמר לנו", ואז
+   לא מציגים תשואה — עדיף בלי מספר מאשר עם מספר שממציא רווח.
+
+   למניה עם מחיר קנייה: העלות נגזרת ממנו. ההמרה לשקלים נעשית
+   בשער של היום, ולכן היא אינה כוללת את השינוי בשער על הקרן —
+   וזה נאמר במפורש במסך. */
+function assetCost(a){
+  if(a&&a.kind==='stock'&&a.buyPrice!=null){
+    const r=FX[a.buyCcy||a.lastCcy||'ILS'];
+    if(r)return (+a.qty||0)*(+a.buyPrice)*r;
+  }
+  return (+a.costBase||0)+assetDeposits(a,'');
+}
+/* התשואה במטבע שבו הנייר נסחר — נקייה משינויי שער, וזה המספר
+   שהברוקר מראה. מוחזר null כשאין על מה להישען. */
+function assetReturnPct(a){
+  if(!a||a.kind!=='stock'||a.buyPrice==null||!(+a.buyPrice))return null;
+  if(a.lastPrice==null)return null;
+  if(a.buyCcy&&a.lastCcy&&a.buyCcy!==a.lastCcy)return null;   /* תפוחים ותפוזים */
+  return ((+a.lastPrice)-(+a.buyPrice))/(+a.buyPrice)*100;
+}
+/* הרווח ביחידות המטבע של הנייר */
+function assetGainNative(a){
+  if(!a||a.kind!=='stock'||a.buyPrice==null||a.lastPrice==null)return null;
+  if(a.buyCcy&&a.lastCcy&&a.buyCcy!==a.lastCcy)return null;
+  return ((+a.lastPrice)-(+a.buyPrice))*(+a.qty||0);
+}
 function assetsTotal(){
   return S.assets.reduce((s,a)=>{const v=assetValue(a);return v==null?s:s+v},0);
 }
@@ -1567,6 +1591,7 @@ const toRow={
     name:o.name,icon:o.icon||'📈',symbol:o.symbol||null,qty:+o.qty||0,
     last_price:o.lastPrice==null?null:+o.lastPrice,last_ccy:o.lastCcy||null,
     last_price_at:o.lastPriceAt||null,
+    buy_price:o.buyPrice==null?null:+o.buyPrice,buy_ccy:o.buyCcy||null,
     value_base:+o.valueBase||0,value_date:o.valueDate||null,
     cost_base:+o.costBase||0,slot:+o.slot||1,note:o.note||null,archived:!!o.archived,
     created_by:o.createdBy||(SESSION&&SESSION.user&&SESSION.user.id)||null}),
@@ -1593,6 +1618,7 @@ const fromRow={
     icon:r.icon||'📈',symbol:r.symbol||'',qty:+r.qty||0,
     lastPrice:r.last_price==null?null:+r.last_price,lastCcy:r.last_ccy||'',
     lastPriceAt:r.last_price_at||'',
+    buyPrice:r.buy_price==null?null:+r.buy_price,buyCcy:r.buy_ccy||'',
     valueBase:+r.value_base||0,valueDate:r.value_date||'',costBase:+r.cost_base||0,
     slot:+r.slot||1,note:r.note||'',archived:!!r.archived,createdBy:r.created_by,mt:0}),
   goals:r=>({id:r.id,ownerId:r.owner_id||null,name:r.name,icon:r.icon||'🎯',
@@ -3338,6 +3364,9 @@ async function refreshQuotes(force){
       const q=j.quotes[a.symbol.trim().toUpperCase()];
       if(!q)return;
       a.lastPrice=+q.price;a.lastCcy=q.ccy||'USD';a.lastPriceAt=j.at||new Date().toISOString();
+      /* מחיר קנייה שהוזן לפני שהיה ציטוט — עכשיו יודעים באיזה
+         מטבע הוא נאמר. משלימים פעם אחת, ולא נוגעים שוב. */
+      if(a.buyPrice!=null&&!a.buyCcy)a.buyCcy=a.lastCcy;
       QMETA[a.symbol.trim().toUpperCase()]={name:q.name||'',type:q.type||'',
         exch:q.exch||'',hi52:q.hi52==null?null:+q.hi52,lo52:q.lo52==null?null:+q.lo52};
       touch(a);changed++;
@@ -3387,10 +3416,15 @@ function priceStamp(){
     `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const ccySym=c=>c==='USD'?'$':c==='EUR'?'€':c==='GBP'?'£':'₪';
+
 function assetRow(a){
   const v=assetValue(a), cost=assetCost(a);
+  /* למניה עם מחיר קנייה האחוז נלקח מהמטבע של הנייר ולא מהשקל,
+     כי אחרת שינוי בשער הדולר היה נקרא כאילו הנייר עלה או ירד. */
+  const nat=assetReturnPct(a);
   const gain=(v!=null&&cost>0)?v-cost:null;
-  const pct=(gain!=null&&cost>0)?gain/cost*100:null;
+  const pct=nat!=null?nat:((gain!=null&&cost>0)?gain/cost*100:null);
   const dep=assetDeposits(a,'');
   return `<div class="astrow" data-id="${a.id}">
     <div class="astmain">
@@ -3398,14 +3432,16 @@ function assetRow(a){
       <div class="astname">
         <b>${esc(a.name)}</b>
         <span class="sub">${a.kind==='stock'
-          ? `${esc(a.symbol||'')} · ${nf.format(a.qty)} יח׳${a.lastPrice!=null?` × ${fmtPrice(a)}`:''}`
+          ? `${esc(a.symbol||'')} · ${nf.format(a.qty)} יח׳${a.lastPrice!=null?` × ${fmtPrice(a)}`:''}${
+              a.buyPrice!=null?` · נקנה ב-${ccySym(a.buyCcy||a.lastCcy)}${pf.format(+a.buyPrice)}`:''}`
           : (a.valueDate?`נכון ל-${a.valueDate.slice(8,10)}/${a.valueDate.slice(5,7)}`:'שווי שהוזן')}
           ${dep?` · הופקדו כאן ${money(dep)}`:''}</span>
       </div>
     </div>
     <div class="astval">
       <b class="${v==null?'muted':''}">${v==null?'אין מחיר':money(v)}</b>
-      ${gain!=null?`<span class="${gain>=0?'pos':'neg'}">${gain>=0?'▲':'▼'} ${money(Math.abs(gain))} (${pct>=0?'+':'−'}${Math.abs(pct).toFixed(1)}%)</span>`:''}
+      ${gain!=null?`<span class="${gain>=0?'pos':'neg'}">${gain>=0?'▲':'▼'} ${money(Math.abs(gain))}${
+        pct!=null?` (${pct>=0?'+':'−'}${Math.abs(pct).toFixed(1)}%${nat!=null&&(a.buyCcy||a.lastCcy)!=='ILS'?' ב'+ccySym(a.buyCcy||a.lastCcy):''})`:''}</span>`:''}
     </div>
     <div class="astact">
       <button class="linkbtn astEdit" data-id="${a.id}">✎</button>
@@ -3435,17 +3471,24 @@ function assetForm(a){
       <input id="astSym" placeholder="סימול (AAPL)" value="${esc((a&&a.symbol)||'')}" style="max-width:150px">
       <input id="astQty" type="number" step="any" inputmode="decimal" placeholder="כמות"
         value="${a&&a.qty?a.qty:''}" style="max-width:130px">
-    </div>`:`<div class="toolbar" style="margin-bottom:10px">
+      <input id="astBuy" type="number" step="any" inputmode="decimal"
+        placeholder="מחיר קנייה ליחידה${a&&(a.buyCcy||a.lastCcy)?' ('+ccySym(a.buyCcy||a.lastCcy)+')':''}"
+        value="${a&&a.buyPrice!=null?a.buyPrice:''}" style="max-width:210px">
+    </div>
+    <p class="sub" style="margin:-4px 0 12px">מחיר הקנייה מוזן <b>במטבע שבו הנייר נסחר</b> — דולר לנייר
+      אמריקאי, שקל לנייר בתל אביב. האחוזים יחושבו באותו מטבע, כדי ששינוי בשער הדולר
+      לא ייראה כאילו הנייר עלה או ירד.</p>`
+    :`<div class="toolbar" style="margin-bottom:10px">
       <input id="astVal" type="number" step="any" inputmode="decimal" placeholder="שווי היום (₪)"
         value="${a?a.valueBase:''}" style="max-width:170px">
       <input id="astDate" type="date" value="${(a&&a.valueDate)||todayStr()}" style="max-width:170px">
-    </div>`}
+    </div>
     <div class="toolbar" style="margin-bottom:10px">
       <input id="astCost" type="number" step="any" inputmode="decimal"
         placeholder="כמה הפקדתם בסך הכול (לא חובה)" value="${a&&a.costBase?a.costBase:''}" style="max-width:280px">
     </div>
     <p class="sub" style="margin:-4px 0 12px">בלי השדה הזה לא נציג תשואה. עדיף בלי מספר מאשר עם מספר שממציא רווח.
-      ${a?`הפקדות שנרשמו כאן באפליקציה (${money(assetDeposits(a,''))}) מתווספות אליו לבד.`:''}</p>
+      ${a?`הפקדות שנרשמו כאן באפליקציה (${money(assetDeposits(a,''))}) מתווספות אליו לבד.`:''}</p>`}
     ${astErr?`<p class="sub" style="color:var(--critical)">${esc(astErr)}</p>`:''}
     <div class="toolbar">
       <button class="btn" id="astSave">${isNew?'הוספה':'שמירה'}</button>
@@ -3474,9 +3517,15 @@ function viewAssets(){
     ${S.assets.length?`
     <div class="big" style="margin:2px 0 4px">${money(tot)}</div>
     <p class="sub" style="margin:0 0 12px">
-      ${gain!=null?`הופקדו ${money(cost)} · ${gain>=0?'ברווח':'בהפסד'} של <b class="${gain>=0?'pos':'neg'}">${money(Math.abs(gain))}</b>`
+      ${gain!=null?`עלות ${money(cost)} · ${gain>=0?'ברווח':'בהפסד'} של <b class="${gain>=0?'pos':'neg'}">${money(Math.abs(gain))}</b>`
         :'סך שווי הנכסים'}
       ${nw!=null?` · יחד עם העו"ש (${money(bal)}) — <b>שווי נטו ${money(nw)}</b>`:''}</p>
+    ${/* המספר הכולל הוא בשקלים ולכן הוא כן מושפע משער החליפין.
+         מי שקורא אותו צריך לדעת זאת, אחרת הוא ישווה אותו לאחוז
+         שבשורת הנייר — שמחושב אחרת בכוונה. */
+      gain!=null&&S.assets.some(a=>assetReturnPct(a)!=null&&(a.buyCcy||a.lastCcy)!=='ILS')
+      ?`<p class="sub" style="margin:-6px 0 12px;font-size:11.5px">הרווח הכולל מחושב בשקלים לפי שער היום.
+         האחוז שליד כל נייר מחושב במטבע שלו, ולכן השניים לא חייבים להסתדר זה עם זה.</p>`:''}
     <div class="astlist">${S.assets.map(assetRow).join('')}</div>
     ${stockAssets().length?`<div class="toolbar" style="margin-top:12px">
       <button class="btn ghost sm" id="astRefresh" ${quoteBusy?'disabled':''}>
@@ -3534,17 +3583,27 @@ function saveAsset(){
   const k=editing?editing.kind:astType;
   const name=(document.getElementById('astName').value||'').trim();
   if(!name){astErr='צריך שם';drawAssets();return}
-  const cost=+(document.getElementById('astCost').value||0)||0;
+  const costEl=document.getElementById('astCost');
+  const cost=costEl?(+(costEl.value||0)||0):((editing&&+editing.costBase)||0);
   const icon=emojiValue('astIcon')||(k==='stock'?'📈':'🐷');
 
   let patch={name,icon,costBase:cost,kind:k};
   if(k==='stock'){
     const sym=(document.getElementById('astSym').value||'').trim().toUpperCase();
     const qty=+(document.getElementById('astQty').value||0)||0;
+    const buyRaw=(document.getElementById('astBuy').value||'').trim();
     if(!sym){astErr='צריך סימול — בלעדיו אין מחיר';drawAssets();return}
     if(qty<=0){astErr='צריך כמות גדולה מאפס';drawAssets();return}
+    if(buyRaw&&!(+buyRaw>0)){astErr='מחיר קנייה חייב להיות גדול מאפס';drawAssets();return}
     patch.symbol=sym;patch.qty=qty;
-    if(editing&&editing.symbol!==sym){patch.lastPrice=null;patch.lastCcy='';patch.lastPriceAt=''}
+    patch.buyPrice=buyRaw?+buyRaw:null;
+    /* מטבע המחיר ננעל לפי הציטוט הידוע. אם עוד אין ציטוט, נשאיר
+       ריק ונשלים אותו ברענון הראשון — ולא ננחש. */
+    patch.buyCcy=buyRaw?((editing&&editing.buyCcy)||(editing&&editing.lastCcy)||'')
+                      :'';
+    if(editing&&editing.symbol!==sym){
+      patch.lastPrice=null;patch.lastCcy='';patch.lastPriceAt='';patch.buyCcy='';
+    }
   }else{
     const val=+(document.getElementById('astVal').value||0)||0;
     const date=document.getElementById('astDate').value||todayStr();
@@ -3555,7 +3614,7 @@ function saveAsset(){
   if(editing)Object.assign(editing,patch),touch(editing);
   else S.assets.push(touch(Object.assign(
     {id:uid(),symbol:'',qty:0,valueBase:0,valueDate:'',lastPrice:null,lastCcy:'',
-     lastPriceAt:'',archived:false,slot:S.assets.length+1},patch)));
+     lastPriceAt:'',buyPrice:null,buyCcy:'',archived:false,slot:S.assets.length+1},patch)));
 
   astEdit=null;astErr='';save();drawAssets();
   toast(editing?'עודכן ✓':'הנכס נוסף ✓');
@@ -3862,6 +3921,12 @@ function portfolioPayload(){
         value_ils:v==null?null:Math.round(v),
         pct_of_portfolio:(v==null||!tot)?null:Math.round(v/tot*1000)/10,
         deposited_ils:c>0?Math.round(c):null,
+        /* מחיר ותשואה במטבע של הנייר. האחוז כאן נקי משינויי שער
+           ולכן הוא היחיד שמותר לקרוא לו "תשואת הנייר". */
+        buy_price:a.buyPrice==null?null:+a.buyPrice,
+        last_price:a.lastPrice==null?null:+a.lastPrice,
+        return_pct_in_quote_ccy:(()=>{const p=assetReturnPct(a);
+          return p==null?null:Math.round(p*10)/10})(),
         priced:v!=null,
       };
     }),
@@ -3872,6 +3937,8 @@ function portfolioPayload(){
       'ואז אין להסיק ממנו רווח או הפסד.',
       'instrument_type ו-instrument_name נמשכו מספק שערים חיצוני.',
       'אם הם null, אינך יודע מה הנייר מחזיק — אל תניח.',
+      'return_pct_in_quote_ccy מחושב במטבע שבו הנייר נסחר ואינו כולל',
+      'שינויי שער חליפין. אל תתאר אותו כתשואה בשקלים.',
     ],
   };
 }
