@@ -1889,10 +1889,22 @@ function drawAuth(){
           : 'ההרשמה כאן היא בהזמנה בלבד — בקשו מבן משפחה קישור הזמנה.'}
         ${authMode==='in'?'<br><a href="#" id="aForgot">שכחתי סיסמה</a>':''}
       </div>
+      ${/* מי שמצטרף חייב לדעת מה קורה לנתונים שלו *לפני* שהוא מוסר
+           אותם, לא אחרי. בהגדרות זה מאוחר מדי. */''}
+      <div class="authalt" style="margin-top:10px">
+        <a href="#" id="aPriv">מה קורה לנתונים שלכם</a>
+      </div>
+      <div id="aPrivBox" class="hide" style="margin-top:12px;text-align:start"></div>
     </div>`;
 
   const err=m=>{document.getElementById('aErr').textContent=m||''};
   const go=document.getElementById('aGo');
+
+  const pv=document.getElementById('aPriv'), pvb=document.getElementById('aPrivBox');
+  if(pv)pv.onclick=e=>{e.preventDefault();
+    const open=!pvb.classList.contains('hide');
+    if(open){pvb.classList.add('hide');pvb.innerHTML='';pv.textContent='מה קורה לנתונים שלכם'}
+    else{pvb.innerHTML=disclosureHtml();pvb.classList.remove('hide');pv.textContent='סגירה'}};
 
   const sw=document.getElementById('aSwitch');
   if(sw)sw.onclick=e=>{e.preventDefault();authMode=authMode==='up'?'in':'up';drawAuth()};
@@ -4155,6 +4167,18 @@ const DISCLOSURE=[
   ['🚫','אין פרסום, אין מדידה, אין מעקב',
    'אין באתר פרסומות, כלי אנליטיקה, פיקסלים או עוגיות מעקב. איננו מוכרים מידע, '
    +'ואיננו משתפים אותו עם צד שלישי למטרות שיווק. לעולם.'],
+
+  ['📤','הנתונים שלכם — לקחת ולמחוק',
+   'בכל רגע אפשר להוריד <b>קובץ עם כל מה שיש עליכם כאן</b> (הגדרות, ההיסטוריה, '
+   +'הקטגוריות, היעדים והנכסים), ואפשר <b>למחוק את החשבון ואת הנתונים</b> — שניהם '
+   +'בהגדרות, בלי לבקש רשות מאיתנו ובלי לחכות. אם יש עוד בני בית, המחיקה מוציאה '
+   +'אתכם מהמשפחה והנתונים המשותפים נשארים שלהם; אם אתם היחידים — הכול נמחק. '
+   +'למחיקה אין דרך חזרה, ולכן כדאי לייצא קודם.'],
+
+  ['🧪','זו גרסה מוקדמת',
+   'המערכת בפיתוח פעיל ונבדקת עם מספר קטן של משפחות. יכולים להיות באגים, '
+   +'ותכונות עשויות להשתנות. אל תוותרו על מקורות המידע של הבנק שלכם — '
+   +'מה שכאן הוא מה שרשמתם, לא מה שקרה בפועל בחשבון.'],
 ];
 
 function disclosureHtml(){
@@ -4227,6 +4251,23 @@ function viewSettings(){
       <button class="btn ghost" id="expBtn">ייצוא JSON</button>
     </div>
     <p class="sub" style="margin:4px 0 0">${S.tx.length} תנועות · ${S.categories.length} קטגוריות · ${S.recurring.length} הוראות קבע</p>
+  </div>
+
+  ${/* מערכת שמחזיקה נתונים פיננסיים ואין בה יציאה היא מערכת
+       שלוקחת ולא מחזירה. הכפתור כאן ולא מוסתר בתחתית. */''}
+  <div class="card">
+    <h2>🗑️ מחיקת החשבון והנתונים</h2>
+    <p class="sub">${S.members.length>1
+      ? `יש עוד ${S.members.length-1} בני בית במשפחה הזו. אתם <b>תצאו ממנה</b>,
+         והנתונים המשותפים יישארו שלהם — הם לא רק שלכם.`
+      : `אתם היחידים במשפחה הזו. מחיקה תמחק את <b>כל</b> הנתונים:
+         ${S.tx.length} תנועות, ${S.categories.length} קטגוריות,
+         ${S.goals.length} יעדים ו-${S.assets.length} נכסים.`}
+      <br>בנוסף יימחק חשבון ההתחברות עצמו. <b>אין דרך לשחזר.</b></p>
+    <p class="sub"><b>כדאי לייצא קודם</b> — הכפתור למעלה מוריד קובץ עם כל מה שיש כאן.</p>
+    <button class="btn ghost" id="delOpen" style="border-color:var(--critical);color:var(--critical)">
+      מחיקת החשבון והנתונים</button>
+    <div id="delBox"></div>
   </div>
 
   <div class="card">
@@ -4385,6 +4426,84 @@ function wireSettings(){
   if(eb)eb.onclick=()=>exportBackup();
   const ec=document.getElementById('expCsv');
   if(ec)ec.onclick=()=>exportCsv();
+  wireDelete();
+}
+
+/* ---------- מחיקת חשבון ----------
+   שלושה מחסומים בכוונה: לחיצה, הקלדת מילה, ואז לחיצה שנייה.
+   פעולה שאין ממנה חזרה לא צריכה להיות במרחק לחיצה אחת. */
+const DEL_WORD='מחיקה';
+function wireDelete(){
+  const open=document.getElementById('delOpen');
+  const box=document.getElementById('delBox');
+  if(!open||!box)return;
+  open.onclick=()=>{
+    open.classList.add('hide');
+    box.innerHTML=`
+      <p class="sub" style="margin:14px 0 8px">כדי לאשר, הקלידו <b>${DEL_WORD}</b>:</p>
+      <div class="toolbar">
+        <input id="delWord" style="max-width:160px" autocomplete="off">
+        <button class="btn" id="delGo" disabled
+          style="background:var(--critical);border-color:var(--critical)">מחיקה סופית</button>
+        <button class="btn ghost" id="delCancel">ביטול</button>
+      </div>
+      <p class="sub" id="delMsg" style="margin-top:10px"></p>`;
+    const w=document.getElementById('delWord'), go=document.getElementById('delGo');
+    w.oninput=()=>{go.disabled=w.value.trim()!==DEL_WORD};
+    w.focus();
+    document.getElementById('delCancel').onclick=()=>{box.innerHTML='';open.classList.remove('hide')};
+    go.onclick=()=>runDelete(go);
+  };
+}
+
+async function runDelete(btn){
+  const msg=document.getElementById('delMsg');
+  const say=t=>{if(msg)msg.innerHTML=t};
+  btn.disabled=true;say('מוחק…');
+  /* קודם התור המקומי: אחרת שמירה שממתינה הייתה כותבת מחדש
+     שורות שנמחקו זה עתה. */
+  DIRTY.clear();GONE.length=0;
+  try{localStorage.removeItem(outboxKey())}catch(e){}
+
+  let what=null;
+  try{
+    const {data,error}=await sb.rpc('delete_my_data',{p_household:HH.id});
+    if(error)throw error;
+    what=data;
+  }catch(e){
+    btn.disabled=false;
+    say('<b style="color:var(--critical)">המחיקה נכשלה ושום דבר לא נמחק:</b> '+esc(e.message||''));
+    return;
+  }
+
+  /* הנתונים כבר אינם. מכאן והלאה אין דרך חזרה, ולכן כל כישלון
+     נאמר במפורש ולא נבלע. */
+  let acct=false, acctErr='';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const r=await fetch(SUPA.url+'/functions/v1/delete-account',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+(session&&session.access_token),
+               'Content-Type':'application/json'},
+      body:'{}'});
+    const j=await r.json().catch(()=>({}));
+    acct=r.ok&&j.ok===true;
+    if(!acct)acctErr=(j&&j.error)||('http_'+r.status);
+  }catch(e){acctErr='net'}
+
+  const gone=what==='deleted';
+  document.getElementById('view').innerHTML=`
+    <div class="card">
+      <h2>${gone?'הנתונים נמחקו':'יצאתם מהמשפחה'}</h2>
+      <p class="sub">${gone
+        ? 'כל הנתונים של המשפחה נמחקו מהשרת.'
+        : 'הוסרתם מהמשפחה. הנתונים המשותפים נשארו אצל שאר בני הבית.'}
+        ${acct?'חשבון ההתחברות נמחק גם הוא.'
+          :`<br><b style="color:var(--warning)">חשבון ההתחברות עדיין קיים</b>
+            (${esc(acctErr)}). הנתונים כבר אינם — כתבו לנו ונמחק גם אותו.`}</p>
+      <button class="btn" id="delOut">סיום</button>
+    </div>`;
+  document.getElementById('delOut').onclick=()=>signOut();
 }
 
 async function saveHouse(patch,ok){
@@ -4428,10 +4547,31 @@ function wireCashSettings(){
 function dl(name,txt,type){const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type}));a.download=name;a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+/* ייצוא מלא. עד עכשיו הקובץ הזה החסיר יעדים, הפקדות, נכסים
+   וקטגוריות העברה — ומי שביקש "את כל המידע שלי" קיבל קובץ חסר
+   בלי לדעת. עכשיו הוא נגזר מכל אוסף שהמערכת מחזיקה, ורושם
+   במפורש מה לא נכלל ולמה. */
 function exportBackup(){
-  dl(`הכיס-המשפחתי-${thisMonth()}.json`,JSON.stringify(
-    {household:HH,categories:S.categories,incomeCats:S.incomeCats,members:S.members,
-     tx:S.tx,recurring:S.recurring},null,2),'application/json');
+  const me=SESSION&&SESSION.user;
+  const payload={
+    _מה_זה:'ייצוא מלא של נתוני המשפחה מהכיס המשפחתי.',
+    _נוצר:new Date().toISOString(),
+    _עבור:me?me.email:'',
+    _לא_נכלל:['סיסמאות (איננו מחזיקים אותן בצורה קריאה)',
+              'יעדי חיסכון אישיים של בני בית אחרים — הם אינם נראים לכם במערכת'],
+    משפחה:HH,
+    בני_הבית:S.members,
+    קטגוריות_הוצאה:S.categories,
+    מקורות_הכנסה:S.incomeCats,
+    יעדי_העברה:S.transferCats,
+    תנועות:S.tx,
+    הוראות_קבע:S.recurring,
+    יעדי_חיסכון:S.goals,
+    הפקדות_ליעדים:S.deposits,
+    נכסים:S.assets,
+    חודשים_שנטענו:S.loadedMonths,
+  };
+  dl(`הכיס-המשפחתי-${todayStr()}.json`,JSON.stringify(payload,null,2),'application/json');
   toast('הקובץ הורד ✓');
 }
 function exportCsv(){
