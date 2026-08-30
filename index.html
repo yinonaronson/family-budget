@@ -4218,10 +4218,74 @@ function installCard(){
   return '';
 }
 
+/* ==================== אזור ניהול ====================
+   הכרטיס נולד מוסתר, קורא לשרת, ומסיר את עצמו אם השרת מסרב.
+
+   אין כאן שום השוואת מייל בצד הלקוח — וזה מכוון פעמיים:
+   index.html הוא קובץ ציבורי, ומייל שכתוב בו מתפרסם לכולם;
+   וחשוב מזה, תנאי בדפדפן אינו הרשאה. מי שידליק את הכרטיס
+   ידנית ב-DevTools יראה מסגרת ריקה, כי הנתונים לא מגיעים
+   מכאן אלא מ-admin_beta_overview שבודקת בעצמה בכל קריאה. */
+function adminCard(){
+  return `
+  <div class="card hide" id="admCard">
+    <h2>🛠️ סבב הבטא</h2>
+    <p class="sub">ספירות בלבד — בלי מיילים, סכומים או תיאורי תנועות.
+      גם לכם אין מכאן דרך לראות מה משפחה אחרת רשמה.</p>
+    <div id="admOut"></div>
+  </div>`;
+}
+
+const admDays=d=>d?Math.round((new Date(todayStr())-new Date(d))/864e5):null;
+
+function admStatus(r){
+  const n=+r.members||0, tx=+r.tx||0, gap=admDays(r.last_tx);
+  if(!n)          return ['לא נרשמו עדיין','var(--muted)'];
+  if(!r.onboarded)return ['נרשמו — נתקעו באשף','var(--critical)'];
+  if(!tx)         return ['סיימו אשף — אפס תנועות','var(--critical)'];
+  if(gap<=7)      return ['פעילים','var(--good-ink)'];
+  return [`שקטים ${gap} ימים`,'var(--warning)'];
+}
+
+function admRow(r){
+  const [label,color]=admStatus(r);
+  const bits=[`${r.members} בני בית`,`${r.cats} קטגוריות`,`${r.tx} תנועות`];
+  if(+r.assets)bits.push(`${r.assets} נכסים`);
+  if(+r.goals) bits.push(`${r.goals} יעדים`);
+  if(+r.open_invites)bits.push(`${r.open_invites} הזמנות פתוחות`);
+  return `<div style="border-top:1px solid var(--ring);padding:11px 0">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+      <b>${esc(r.name||'—')}</b>
+      <span style="color:${color};font-weight:700;font-size:13px">${esc(label)}</span></div>
+    <div class="sub" style="margin:3px 0 0">${bits.join(' · ')}</div>
+    <div class="sub" style="margin:2px 0 0;font-size:12px">
+      <span dir="ltr">${esc(r.hh)}</span> · נוצרה ${esc(r.created||'—')}${
+      r.last_tx?` · תנועה אחרונה ${esc(r.last_tx)}`:''}${
+      r.ai_consent?' · יועץ ✓':''}${r.ai_assets_consent?' · נכסים ✓':''}</div>
+  </div>`;
+}
+
+async function wireAdmin(){
+  const card=document.getElementById('admCard');
+  if(!card)return;
+  const {data,error}=await sb.rpc('admin_beta_overview');
+  /* אין הרשאה, אין כרטיס. לא "כרטיס ריק" — כדי שלא ייראה
+     כאילו פשוט אין משפחות. */
+  if(error||!data){card.remove();return}
+
+  const joined=data.filter(r=>+r.members>0).length;
+  document.getElementById('admOut').innerHTML=
+    `<p style="margin:0 0 4px;font-weight:700">${joined} מתוך ${data.length} משפחות נרשמו</p>`
+    +data.map(admRow).join('');
+  card.classList.remove('hide');
+}
+
 function viewSettings(){
   const me=SESSION&&SESSION.user;
   return `
   ${installCard()}
+
+  ${adminCard()}
 
   <div class="card">
     <h2>👤 החשבון שלי</h2>
@@ -4351,6 +4415,7 @@ function wireSettings(){
   wireCookieCard();
   wireAdvisorSettings();
   wireCashSettings();
+  wireAdmin().catch(()=>{const c=document.getElementById('admCard');if(c)c.remove()});
   const dg=document.getElementById('digestOn');
   if(dg)dg.onchange=async()=>{
     const want=dg.checked;
