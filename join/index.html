@@ -1,0 +1,565 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>הכיס המשפחתי · דף נחיתה</title>
+<style>
+/* ---------- גופנים: מוגשים מאותו שרת, בלי פנייה למקור זר ---------- */
+@font-face{font-family:Serif;font-weight:200;font-display:swap;src:url(fonts/noto-serif-hebrew-hebrew-200-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
+@font-face{font-family:Serif;font-weight:300;font-display:swap;src:url(fonts/noto-serif-hebrew-hebrew-300-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
+@font-face{font-family:Serif;font-weight:400;font-display:swap;src:url(fonts/noto-serif-hebrew-hebrew-400-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
+@font-face{font-family:Serif;font-weight:200;font-display:swap;src:url(fonts/noto-serif-hebrew-latin-200-normal.woff2) format('woff2')}
+@font-face{font-family:Serif;font-weight:300;font-display:swap;src:url(fonts/noto-serif-hebrew-latin-300-normal.woff2) format('woff2')}
+@font-face{font-family:Serif;font-weight:400;font-display:swap;src:url(fonts/noto-serif-hebrew-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:Sans;font-weight:300;font-display:swap;src:url(fonts/heebo-hebrew-300-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
+@font-face{font-family:Sans;font-weight:400;font-display:swap;src:url(fonts/heebo-hebrew-400-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
+@font-face{font-family:Sans;font-weight:500;font-display:swap;src:url(fonts/heebo-hebrew-500-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
+@font-face{font-family:Sans;font-weight:600;font-display:swap;src:url(fonts/heebo-hebrew-600-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
+@font-face{font-family:Sans;font-weight:300;font-display:swap;src:url(fonts/heebo-latin-300-normal.woff2) format('woff2')}
+@font-face{font-family:Sans;font-weight:400;font-display:swap;src:url(fonts/heebo-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:Sans;font-weight:500;font-display:swap;src:url(fonts/heebo-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:Sans;font-weight:600;font-display:swap;src:url(fonts/heebo-latin-600-normal.woff2) format('woff2')}
+
+:root{
+  --ground:#0E0D0B; --raised:#17150F; --deep:#14130F; --line:#2B2821; --line-2:#3A362D;
+  --ivory:#F2EDE3; --text-2:#B8B1A3; --muted:#A8A194; --faint:#8A8478;
+  --gold:#C9A96E; --gold-hi:#E2C891; --gold-deep:#7A5F2E; --warn:#E8A08F;
+  --serif:Serif,'Noto Serif Hebrew','David Libre',Georgia,serif;
+  --sans:Sans,Heebo,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --pad:112px; --ease:cubic-bezier(.2,.7,.2,1);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ivory);font-family:var(--sans);font-weight:300;line-height:1.6;overflow-x:hidden}
+img{display:block;max-width:100%}
+a{color:var(--gold)}a:hover{color:var(--gold-hi)}
+h1,h2,h3{margin:0;font-family:var(--serif);font-weight:200}
+p{margin:0}
+.wrap{padding-inline:var(--pad);max-width:1440px;margin-inline:auto}
+.eyebrow{display:inline-flex;align-items:center;gap:14px;font-size:14px;font-weight:500;letter-spacing:1px;color:var(--gold)}
+.eyebrow::before{content:"";width:40px;height:1px;background:var(--gold)}
+.eyebrow.plain::before{display:none}
+.gold{color:var(--gold)}
+.lead{font-size:18px;line-height:1.8;color:var(--muted)}
+.skip{position:absolute;inset-inline-start:-9999px;top:8px;background:var(--gold);color:var(--ground);padding:10px 16px;z-index:100}
+.skip:focus{inset-inline-start:8px}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
+/* ---------- ניווט ---------- */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(14,13,11,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid #24211B}
+.nav .wrap{height:88px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.brand{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ivory)}
+.brand span{font-family:var(--serif);font-weight:400;font-size:23px;letter-spacing:1px}
+.links{display:flex;gap:40px;font-size:15px;letter-spacing:.5px}
+.links a{color:var(--muted);text-decoration:none}.links a:hover{color:var(--ivory)}
+.navcta{display:flex;align-items:center;gap:24px;font-size:15px}
+.navcta .in{color:var(--ivory);text-decoration:none}
+.btn-line{height:46px;padding:0 24px;display:inline-flex;align-items:center;border:1px solid var(--gold);border-radius:2px;color:var(--gold);text-decoration:none;font-weight:500;letter-spacing:.5px;transition:background .3s,color .3s}
+.btn-line:hover{background:var(--gold);color:var(--ground)}
+
+/* ---------- טופס הרשמה ---------- */
+.signup{display:flex;align-items:flex-end;gap:20px;max-width:600px}
+.signup .field{flex:1;display:flex;flex-direction:column;gap:8px}
+.signup label{font-size:13px;font-weight:500;letter-spacing:.5px;color:var(--muted)}
+.signup input{height:52px;padding:0 2px;border:0;border-bottom:1px solid #5A5446;background:transparent;font:300 19px var(--sans);color:var(--ivory);text-align:right;border-radius:0;transition:border-color .3s}
+.signup input::placeholder{color:#6E685C}
+.signup input:focus{outline:none;border-bottom-color:var(--gold)}
+.btn-gold{height:56px;padding:0 34px;border:0;border-radius:2px;background:var(--gold);color:var(--ground);font:600 16px var(--sans);letter-spacing:.5px;cursor:pointer;transition:background .3s,transform .3s var(--ease)}
+.btn-gold:hover{background:var(--gold-hi)}
+.btn-gold:active{transform:scale(.98)}
+.fine{font-size:13px;color:var(--faint)}
+
+/* ---------- מסגרת טלפון ---------- */
+.phone{position:relative;width:300px;aspect-ratio:390/844;border-radius:48px;padding:9px;background:#0A0908;border:1px solid var(--line-2);box-shadow:0 60px 120px -40px rgba(0,0,0,.95),inset 0 0 0 1px #1F1D17}
+.phone .screen{position:relative;width:100%;height:100%;border-radius:39px;overflow:hidden;background:#141414}
+.phone .screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .9s var(--ease)}
+.phone .screen img.on{opacity:1}
+#entry img{transition:opacity .16s linear}
+.phone .notch{position:absolute;top:18px;left:50%;width:84px;height:24px;margin-left:-42px;border-radius:20px;background:#0A0908;z-index:3}
+
+/* ---------- פתיחה ---------- */
+.hero .wrap{padding-block:64px 104px;display:flex;align-items:center;gap:64px}
+.hero .copy{flex:1;display:flex;flex-direction:column;gap:34px;min-width:0}
+.hero h1{font-size:clamp(48px,6.4vw,92px);line-height:1.04;letter-spacing:-.5px}
+.hero h1 .gold{white-space:nowrap}
+.hero .sub{max-width:540px;font-size:20px;line-height:1.75;color:var(--text-2)}
+.stage{position:relative;width:520px;height:720px;flex-shrink:0}
+.stage .frame{position:absolute;top:60px;right:20px;width:460px;height:600px;border:1px solid var(--line)}
+.stage .phone{position:absolute;top:10px;right:110px;width:318px}
+.float{position:absolute;border-radius:4px;box-shadow:0 30px 60px -20px rgba(0,0,0,.85);animation:bob 7s ease-in-out infinite}
+.f-alert{top:480px;right:330px;width:250px;padding:18px 20px;background:var(--ivory);color:var(--ground);display:flex;flex-direction:column;gap:6px;animation-delay:-2s}
+.f-alert small{font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--gold-deep)}
+.f-alert b{font-family:var(--serif);font-weight:400;font-size:19px;line-height:1.35}
+.f-alert span{font-size:12px;color:#5B5A55}
+.f-sync{top:120px;right:-6px;width:220px;padding:14px 16px;background:#1F1D17;border:1px solid var(--line-2);display:flex;align-items:center;gap:12px}
+.av{width:34px;height:34px;flex-shrink:0;border-radius:999px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font:500 16px var(--sans);color:var(--gold)}
+.f-sync div{display:flex;flex-direction:column;gap:2px}
+.f-sync b{font-weight:400;font-size:13px}.f-sync span{font-size:11px;color:var(--faint)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.hero-in .copy>*{opacity:0;transform:translateY(18px);animation:rise 1s var(--ease) forwards}
+.hero-in .copy>*:nth-child(2){animation-delay:.08s}.hero-in .copy>*:nth-child(3){animation-delay:.16s}
+.hero-in .copy>*:nth-child(4){animation-delay:.24s}.hero-in .copy>*:nth-child(5){animation-delay:.32s}
+.hero-in .stage{opacity:0;transform:translateY(30px);animation:rise 1.3s .2s var(--ease) forwards}
+.hero-in .f-alert,.hero-in .f-sync{opacity:0;animation:pop .8s var(--ease) forwards,bob 7s ease-in-out 1.6s infinite}
+.hero-in .f-sync{animation-delay:.9s,1.7s}.hero-in .f-alert{animation-delay:1.3s,2.1s}
+@keyframes rise{to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+
+/* ---------- עקרונות ---------- */
+.principles{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:38px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px}
+.principles div{display:flex;align-items:baseline;gap:18px;font-family:var(--serif);font-weight:300;font-size:24px}
+.principles i{font-style:normal;font-size:15px;letter-spacing:2px;color:var(--gold)}
+
+/* ---------- מחשב נייד ---------- */
+.show{padding-block:144px 40px;text-align:center}
+.show h2{font-size:clamp(40px,5vw,72px);line-height:1.08;margin-top:22px}
+.show .lead{max-width:620px;margin:22px auto 0}
+.laptop{margin:72px auto 0;width:min(1120px,100%);perspective:1800px}
+.laptop .lid{transform-origin:50% 100%;transform:rotateX(var(--tilt,16deg));transition:transform .1s linear;border-radius:18px 18px 4px 4px;padding:14px 14px 18px;background:#0A0908;border:1px solid var(--line-2);box-shadow:0 80px 140px -60px rgba(0,0,0,1)}
+.laptop .screen{position:relative;aspect-ratio:16/10;border-radius:6px;overflow:hidden;background:#111}
+.laptop .screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;opacity:0;transition:opacity 1s var(--ease)}
+.laptop .screen img.on{opacity:1}
+.laptop .base{height:18px;margin:0 -6%;border-radius:0 0 18px 18px;background:linear-gradient(#2A2721,#15130F);border:1px solid var(--line-2);border-top:0}
+.laptop .base::after{content:"";display:block;width:16%;height:6px;margin:0 auto;border-radius:0 0 8px 8px;background:#0A0908}
+.tabs-demo{display:flex;justify-content:center;gap:10px;margin-top:40px;flex-wrap:wrap}
+.tabs-demo button{height:44px;padding:0 20px;border:1px solid var(--line-2);border-radius:999px;background:transparent;color:var(--muted);font:400 15px var(--sans);cursor:pointer;transition:all .3s}
+.tabs-demo button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.demo-note{margin-top:18px;font-size:13px;color:var(--faint)}
+
+/* ---------- רישום מהיר ---------- */
+.quick{padding-block:144px}
+.quick .wrap{display:flex;align-items:center;gap:96px}
+.quick .copy{flex:1;display:flex;flex-direction:column;gap:26px}
+.quick h2{font-size:clamp(40px,5vw,72px);line-height:1.08}
+.steps{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column}
+.steps li{display:flex;gap:22px;align-items:baseline;padding:22px 0;border-top:1px solid var(--line);color:var(--faint);transition:color .5s}
+.steps li:last-child{border-bottom:1px solid var(--line)}
+.steps li b{font-family:var(--serif);font-weight:300;font-size:26px;transition:color .5s}
+.steps li i{font-style:normal;font-family:var(--serif);font-size:15px;color:var(--line-2);width:24px;transition:color .5s}
+.steps li.on{color:var(--muted)}.steps li.on b{color:var(--ivory)}.steps li.on i{color:var(--gold)}
+.player{position:relative;flex-shrink:0}
+.player .phone{width:340px}
+.tap{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:999px;background:rgba(201,169,110,.35);border:1px solid var(--gold);pointer-events:none;opacity:0;z-index:4}
+.tap.go{animation:tap .55s var(--ease)}
+@keyframes tap{0%{opacity:0;transform:scale(.4)}30%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.6)}}
+
+/* ---------- המערכת ---------- */
+.craft{padding-block:128px}
+.head2{display:flex;justify-content:space-between;align-items:flex-end;gap:64px}
+.head2 h2{font-size:clamp(44px,5.6vw,80px);line-height:1.05;margin-top:22px}
+.head2 .lead{max-width:400px}
+.rows{margin-top:88px}
+.row{padding:56px 0;border-top:1px solid var(--line);display:flex;align-items:center;gap:64px}
+.row:last-child{border-bottom:1px solid var(--line)}
+.row .num{width:110px;flex-shrink:0;font-family:var(--serif);font-weight:200;font-size:64px;line-height:1;color:var(--gold)}
+.row .txt{flex:1;display:flex;flex-direction:column;gap:14px}
+.row h3{font-weight:300;font-size:36px}
+.row p{max-width:480px;font-size:17px;line-height:1.75;color:var(--muted)}
+.crop{--y:0;width:400px;height:300px;flex-shrink:0;position:relative;overflow:hidden;border:1px solid var(--line);background:var(--raised)}
+.crop img{position:absolute;height:auto;width:320px;left:40px;top:calc(28px - var(--y) * .8205px);border-radius:24px 24px 0 0;border:1px solid var(--line-2);box-shadow:0 30px 60px -30px #000;transition:transform 1.6s var(--ease)}
+.crop .fade{position:absolute;inset:auto 0 0 0;height:90px;background:linear-gradient(transparent,var(--raised))}
+.also{margin-top:48px;display:flex;flex-wrap:wrap;align-items:baseline;gap:14px 28px;font-size:16px;color:var(--muted)}
+.also em{font-style:normal;font-size:13px;font-weight:500;letter-spacing:1px;color:var(--gold)}
+.also span+span::before{content:"·";margin-inline-end:28px;color:var(--line-2)}
+
+/* ---------- הצהרה ---------- */
+.statement{padding:160px var(--pad);background:var(--ivory);color:var(--ground);text-align:center;display:flex;flex-direction:column;align-items:center;gap:40px}
+.statement p.big{max-width:1040px;font-family:var(--serif);font-weight:200;font-size:clamp(32px,4.4vw,64px);line-height:1.3}
+.statement p.big span{color:var(--gold-deep)}
+.statement p.small{max-width:560px;font-size:18px;line-height:1.75;color:#4A4944}
+
+/* ---------- פרטיות ---------- */
+.privacy{padding-block:144px}
+.grid3{margin-top:72px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
+.grid3>div{padding:40px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.grid3>div:not(:nth-child(3n+1)){border-right:1px solid var(--line)}
+.grid3>div:nth-child(3n+1){padding-right:0}.grid3>div:nth-child(3n){padding-left:0}
+.grid3>div:nth-last-child(-n+3){border-bottom:0}
+.grid3 b{font-family:var(--serif);font-weight:300;font-size:26px}
+.grid3 span{font-size:16px;line-height:1.7;color:var(--muted)}
+.grid3 .honest b{color:var(--gold)}.grid3 .honest span{color:#D8D2C4}
+
+/* ---------- מתחילים ---------- */
+.begin{padding-block:128px;background:var(--deep);border-block:1px solid #24211B}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:56px}
+.three>div{display:flex;flex-direction:column;gap:16px}
+.three i{font-style:normal;font-family:var(--serif);font-weight:200;font-size:56px;line-height:1;color:var(--gold)}
+.three b{font-family:var(--serif);font-weight:300;font-size:28px}
+.three p{font-size:16px;line-height:1.75;color:var(--muted)}
+.invite{margin-top:96px;padding:88px 96px;border:1px solid var(--gold);display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center}
+.invite h2{font-size:clamp(38px,5vw,72px);line-height:1.1}
+.invite .signup{width:min(620px,100%);margin-top:12px}
+.invite .field{text-align:right}
+
+/* ---------- שאלות ---------- */
+.faq{padding-block:128px}
+.faq .wrap{display:flex;gap:96px}
+.faq .side{width:360px;flex-shrink:0;display:flex;flex-direction:column;gap:22px}
+.faq h2{font-size:56px;line-height:1.1}
+.qs{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:56px;align-content:start}
+.qs details{border-top:1px solid var(--line)}
+.qs details:nth-last-child(-n+2){border-bottom:1px solid var(--line)}
+.qs summary{list-style:none;cursor:pointer;min-height:44px;padding:26px 0;display:flex;justify-content:space-between;gap:16px;align-items:center;font-family:var(--serif);font-weight:400;font-size:21px}
+.qs summary::-webkit-details-marker{display:none}
+.qs summary::after{content:"+";font-family:var(--sans);font-weight:300;font-size:24px;color:var(--gold);transition:transform .3s}
+.qs details[open] summary::after{transform:rotate(45deg)}
+.qs details p{padding:0 0 26px;font-size:16px;line-height:1.7;color:var(--muted)}
+
+footer .wrap{padding-block:48px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:24px;font-size:14px;letter-spacing:.5px;color:var(--faint)}
+footer nav{display:flex;gap:32px}footer nav a{color:var(--muted)}
+footer .brandline{display:flex;align-items:center;gap:12px}
+
+/* ---------- הופעה בגלילה ---------- */
+.js-rv .rv{opacity:0;transform:translateY(28px);transition:opacity 1s var(--ease),transform 1s var(--ease)}
+.js-rv .rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}
+.row.in .crop img{transform:translateY(-18px)}
+
+/* ---------- מסכים ---------- */
+@media (max-width:1180px){
+  :root{--pad:56px}
+  .links{display:none}
+  .hero .wrap{flex-direction:column;align-items:stretch}
+  .stage{align-self:center}
+  .quick .wrap{gap:56px}
+  .row{flex-wrap:wrap}.crop{width:100%;max-width:520px}
+  .faq .wrap{flex-direction:column;gap:40px}.faq .side{width:auto}
+}
+@media (max-width:760px){
+  :root{--pad:20px}
+  .nav .wrap{height:68px}.brand span{font-size:19px}
+  .navcta{gap:16px}.navcta .btn-line{display:none}
+  .navcta .in{min-height:44px;display:inline-flex;align-items:center}
+  .hero .wrap{padding-block:44px 64px;gap:40px}
+  .hero .copy{gap:24px}
+  .hero .sub{font-size:17px}
+  .eyebrow{font-size:13px}.eyebrow::before{width:28px}
+  .signup{flex-direction:column;align-items:stretch;gap:16px}
+  .btn-gold{width:100%}
+  .stage{width:350px;height:560px;transform-origin:top center}
+  .stage .frame{top:40px;right:10px;width:330px;height:480px}
+  .stage .phone{width:240px;right:55px;top:0;border-radius:38px;padding:7px}
+  .stage .phone .screen{border-radius:31px}
+  .stage .notch{top:13px;width:64px;height:18px;margin-left:-32px}
+  .f-alert{top:390px;right:150px;width:200px;padding:14px 16px}.f-alert b{font-size:16px}
+  .f-sync{top:70px;right:-4px;width:190px;padding:12px}
+  .principles{grid-template-columns:1fr;gap:16px;padding-block:28px}
+  .principles div{font-size:21px}
+  .show{padding-block:88px 24px}
+  .laptop{margin-top:44px}.laptop .lid{padding:6px 6px 8px;border-radius:10px 10px 3px 3px}
+  .laptop .base{height:10px}
+  .quick{padding-block:88px}
+  .quick .wrap{flex-direction:column;align-items:stretch}
+  .player{align-self:center;margin-bottom:44px}.player .phone{width:280px}
+  .steps li b{font-size:22px}
+  .craft,.privacy,.begin,.faq{padding-block:80px}
+  .head2{flex-direction:column;align-items:flex-start;gap:20px}
+  .rows{margin-top:40px}
+  .row{padding:36px 0;gap:18px;flex-direction:column;align-items:flex-start}
+  .row .num{font-size:40px;width:auto}.row h3{font-size:27px}.row p{font-size:16px}
+  .crop{height:260px}.crop img{width:260px;left:calc(50% - 130px);top:calc(24px - var(--y) * .6667px)}
+  .also span+span::before{display:none}
+  .also{flex-direction:column;gap:8px}
+  .statement{padding:88px 24px;gap:26px}
+  .grid3{grid-template-columns:1fr;margin-top:32px}
+  .grid3>div{padding:22px 0!important;border-right:0!important;border-bottom:1px solid var(--line)!important}
+  .three{grid-template-columns:1fr;gap:32px}
+  .three>div{display:grid;grid-template-columns:34px 1fr;gap:6px 16px}.three i{font-size:40px;grid-row:span 2}
+  .three b{font-size:23px}
+  .invite{margin-top:56px;padding:48px 22px}
+  .qs{grid-template-columns:1fr}.qs details:nth-last-child(2){border-bottom:0}
+  .faq h2{font-size:40px}
+  footer .wrap{flex-direction:column-reverse;align-items:flex-start}
+  footer nav{gap:22px}footer nav a{min-height:44px;display:inline-flex;align-items:center}
+}
+@media (max-width:370px){.stage{transform:scale(.9)}}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .rv,.hero-in .copy>*,.hero-in .stage,.hero-in .f-alert,.hero-in .f-sync{opacity:1!important;transform:none!important}
+  .laptop .lid{transform:none!important}
+}
+</style>
+
+<a class="skip" href="#main">דילוג לתוכן</a>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="הכיס המשפחתי, לראש הדף">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1l8 8-8 8-8-8z" fill="none" stroke="#C9A96E" stroke-width="1.2"/><path d="M9 5.5l3.5 3.5L9 12.5 5.5 9z" fill="#C9A96E"/></svg>
+      <span>הכיס המשפחתי</span>
+    </a>
+    <nav class="links" aria-label="ניווט בדף">
+      <a href="#see">המערכת</a><a href="#privacy">פרטיות</a><a href="#begin">איך מתחילים</a><a href="#faq">שאלות</a>
+    </nav>
+    <div class="navcta">
+      <a class="in" href="#top">כניסה</a>
+      <a class="btn-line" href="#invite">פתיחת חשבון</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<!-- ============ פתיחה ============ -->
+<section class="hero hero-in" id="top">
+  <div class="wrap">
+    <div class="copy">
+      <span class="eyebrow">גרסה מוקדמת · ההרשמה פתוחה</span>
+      <h1>לדעת לאן<br>הולך הכסף,<br><span class="gold">בזמן שהוא הולך.</span></h1>
+      <p class="sub">תקציב משפחתי שכל בני הבית מנהלים יחד, מאותו מסך ובאותו רגע. תקרה לכל קטגוריה, רישום בשתי שניות, והתראה שמגיעה לפני החריגה ולא אחריה.</p>
+      <form class="signup" action="/" method="get" data-signup>
+        <input type="hidden" name="signup" value="1">
+        <div class="field">
+          <label for="email-hero">כתובת אימייל</label>
+          <input id="email-hero" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" dir="ltr" required>
+        </div>
+        <button class="btn-gold" type="submit">פתיחת חשבון</button>
+      </form>
+      <p class="fine">בפתיחת חשבון אתם מאשרים את <a href="#faq">תנאי השימוש</a> · <a href="#privacy">מה קורה לנתונים שלכם</a></p>
+    </div>
+
+    <div class="stage" aria-hidden="true">
+      <div class="frame"></div>
+      <div class="phone">
+        <div class="screen" data-cycle="4200">
+          <img class="on" src="img/m-dash.webp" width="780" height="1688" alt="">
+          <img src="img/m-cats.webp" width="780" height="1688" alt="" loading="lazy" decoding="async">
+          <img src="img/m-goals.webp" width="780" height="1688" alt="" loading="lazy" decoding="async">
+        </div>
+      </div>
+      <div class="float f-sync"><span class="av">נ</span><div><b>נועה רשמה ₪412</b><span>שופרסל · לפני רגע</span></div></div>
+      <div class="float f-alert"><small>התראה</small><b>דלק ותחבורה הגיע ל־88% מהתקרה</b><span>נשארו 7 ימים בחודש</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="principles rv">
+  <div><i>I</i>שתי שניות לרישום</div>
+  <div><i>II</i>כל הבית, מסך אחד</div>
+  <div><i>III</i>התראה לפני החריגה</div>
+</div></div>
+
+<!-- ============ מחשב ============ -->
+<section class="show" id="see">
+  <div class="wrap">
+    <span class="eyebrow plain rv">המערכת, כמו שהיא</span>
+    <h2 class="rv d1">כל התמונה.<br>מסך אחד<span class="gold">.</span></h2>
+    <p class="lead rv d2">מה שנשאר להוציא, העו״ש ותחזית לסוף החודש, והקטגוריות שקרובות לתקרה. אותם מספרים אצל כל בני הבית, בטלפון ובמחשב.</p>
+    <div class="laptop rv" id="laptop">
+      <div class="lid"><div class="screen" id="lapScreen">
+        <img class="on" src="img/d-dash.webp" width="1440" height="900" alt="מסך הדשבורד: נותר להוציא החודש, הכנסות, הוצאות, יתרת עו״ש ותחזית" loading="lazy" decoding="async">
+        <img src="img/d-budget.webp" width="1440" height="900" alt="מסך התקציב: תקרה ושימוש לכל קטגוריה" loading="lazy" decoding="async">
+        <img src="img/d-tx.webp" width="1440" height="900" alt="מסך התנועות: כל ההוצאות וההכנסות עם סינון" loading="lazy" decoding="async">
+      </div></div>
+      <div class="base"></div>
+    </div>
+    <div class="tabs-demo" role="group" aria-label="בחירת מסך להצגה">
+      <button type="button" aria-pressed="true" data-lap="0">דשבורד</button>
+      <button type="button" aria-pressed="false" data-lap="1">תקציב</button>
+      <button type="button" aria-pressed="false" data-lap="2">תנועות</button>
+    </div>
+    <p class="demo-note">המסכים לקוחים מהמערכת עצמה, עם נתונים של משפחה לדוגמה.</p>
+  </div>
+</section>
+
+<!-- ============ רישום מהיר ============ -->
+<section class="quick">
+  <div class="wrap">
+    <div class="copy">
+      <span class="eyebrow rv">רישום מהיר</span>
+      <h2 class="rv d1">שתי שניות<span class="gold">.</span><br>באמת.</h2>
+      <p class="lead rv d2">רוב אפליקציות התקציב מתות מהזנה ידנית. כאן כפתור אחד בכל מסך, מקלדת מספרים גדולה וקטגוריה בנגיעה, כך שהרישום קורה ליד הקופה ולא בסוף החודש.</p>
+      <ol class="steps rv d3" id="steps">
+        <li class="on"><i>1</i><div><b>מקלידים סכום</b></div></li>
+        <li><i>2</i><div><b>בוחרים קטגוריה</b></div></li>
+        <li><i>3</i><div><b>שומרים, וכולם כבר רואים</b></div></li>
+      </ol>
+    </div>
+    <div class="player rv d1" aria-hidden="true">
+      <div class="phone">
+        <div class="screen" id="entry">
+          <img class="on" src="img/m-entry-0.webp" width="780" height="1688" alt="" loading="lazy" decoding="async">
+          <img src="img/m-entry-1.webp" width="780" height="1688" alt="" loading="lazy" decoding="async">
+          <img src="img/m-entry-2.webp" width="780" height="1688" alt="" loading="lazy" decoding="async">
+          <img src="img/m-entry-3.webp" width="780" height="1688" alt="" loading="lazy" decoding="async">
+          <img src="img/m-entry-4.webp" width="780" height="1688" alt="" loading="lazy" decoding="async">
+          <img src="img/m-entry-5.webp" width="780" height="1688" alt="" loading="lazy" decoding="async">
+          <span class="tap" id="tap"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ המערכת ============ -->
+<section class="craft" id="craft">
+  <div class="wrap">
+    <div class="head2">
+      <div><span class="eyebrow">מה יש בפנים</span><h2>כל שקל,<br>במקומו<span class="gold">.</span></h2></div>
+      <p class="lead">מספרים שנשארים נכונים גם באמצע החודש, בלי לחכות לדף החשבון מהבנק.</p>
+    </div>
+    <div class="rows">
+      <article class="row rv">
+        <span class="num">01</span>
+        <div class="txt"><h3>תקרה לכל קטגוריה</h3><p>מגדירים כמה מותר, ורואים כמה נשאר בזמן אמת. מה שחרג מסומן במילים ובסמל, לא רק בצבע.</p></div>
+        <div class="crop" style="--y:52"><img src="img/m-cats.webp" width="780" height="1688" alt="רשימת הקטגוריות עם אחוז הניצול, אזהרה ליד 90% וסימון חריגה ב־104%" loading="lazy" decoding="async"><span class="fade"></span></div>
+      </article>
+      <article class="row rv">
+        <span class="num">02</span>
+        <div class="txt"><h3>התראה לפני החריגה</h3><p>אזהרה ב־85% מהתקרה, ותחזית עו״ש לסוף החודש לפי הקצב, עם ההנחות שמאחוריה. כשעוד אפשר לעשות משהו.</p></div>
+        <div class="crop" style="--y:372"><img src="img/m-dash.webp" width="780" height="1688" alt="דשבורד עם טבעת ניצול, יתרת עו״ש ותחזית לסוף החודש" loading="lazy" decoding="async"><span class="fade"></span></div>
+      </article>
+      <article class="row rv">
+        <span class="num">03</span>
+        <div class="txt"><h3>כל הבית באותו מסך</h3><p>סנכרון חי בין הטלפונים. רואים מי הוציא מה ומתי, בלי לשאול ובלי לחכות.</p></div>
+        <div class="crop" style="--y:352"><img src="img/m-tx.webp" width="780" height="1688" alt="רשימת תנועות עם שם בן המשפחה שרשם כל הוצאה" loading="lazy" decoding="async"><span class="fade"></span></div>
+      </article>
+      <article class="row rv">
+        <span class="num">04</span>
+        <div class="txt"><h3>מה שחוזר, נטען לבד</h3><p>הוראות הקבע נכנסות בפתיחה הראשונה של כל חודש, עם ביטול בלחיצה. התקציב לא נראה טוב יותר ממה שהוא.</p></div>
+        <div class="crop" style="--y:58"><img src="img/m-fixed.webp" width="780" height="1688" alt="מסך הוצאות קבועות עם טעינה אוטומטית בכל חודש" loading="lazy" decoding="async"><span class="fade"></span></div>
+      </article>
+    </div>
+    <div class="also rv"><em>וגם</em><span>פיצול קנייה בין קטגוריות</span><span>יעדי חיסכון משפחתיים ואישיים</span><span>נכסים וחסכונות</span><span>יועץ הכיס, בהסכמת המשפחה</span></div>
+  </div>
+</section>
+
+<!-- ============ הצהרה ============ -->
+<section class="statement">
+  <svg width="22" height="22" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1l8 8-8 8-8-8z" fill="none" stroke="#8F7445" stroke-width="1.2"/><path d="M9 5.5l3.5 3.5L9 12.5 5.5 9z" fill="#8F7445"/></svg>
+  <p class="big rv">400 ש״ח שנחסכים על ביטוח שווים בדיוק להעלאה של 400 ש״ח. <span>רק שהם הרבה יותר בהישג יד.</span></p>
+  <p class="small rv d1">הכיס המשפחתי לא מבטיח לכם עוד כסף. הוא מראה לכם לאן הולך הכסף שכבר יש.</p>
+</section>
+
+<!-- ============ פרטיות ============ -->
+<section class="privacy" id="privacy">
+  <div class="wrap">
+    <div class="head2">
+      <div><span class="eyebrow">גילוי נאות</span><h2>פרטיות,<br>בלי אותיות קטנות<span class="gold">.</span></h2></div>
+      <p class="lead">כתבנו את זה במדויק, כולל החלק הפחות נוח. כדאי לדעת לפני שמוסרים, לא אחרי.</p>
+    </div>
+    <div class="grid3 rv">
+      <div><b>רק מי שהזמנתם</b><span>בני הבית רואים את התקציב המשותף. יעד חיסכון אישי רואים רק אתם.</span></div>
+      <div><b>הפרדה בשרת</b><span>משפחה אחת לא יכולה לראות נתונים של אחרת. זה נאכף בבסיס הנתונים, לא בדפדפן.</span></div>
+      <div><b>בלי פרסום ובלי מעקב</b><span>אין מדידה, אין מעקב, ואין מכירה של מידע. לאף אחד.</span></div>
+      <div><b>הצפנה בהעברה ובאחסון</b><span>סיסמאות נשמרות מגובבות. התשתית: Supabase, Resend, GitHub Pages.</span></div>
+      <div><b>הנתונים שלכם, לקחת</b><span>ייצוא מלא בקובץ אחד, ומחיקת החשבון מתוך ההגדרות.</span></div>
+      <div class="honest"><b>ומה שכן</b><span>אין הצפנה מקצה לקצה. למפעיל השירות יש גישה טכנית לבסיס הנתונים, לצורכי תחזוקה.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ מתחילים ============ -->
+<section class="begin" id="begin">
+  <div class="wrap">
+    <div class="three">
+      <div class="rv"><i>1</i><b>פותחים ומזמינים</b><p>חשבון אחד, וקישור הזמנה לבן או לבת הזוג. מכאן כולם רואים את אותם מספרים.</p></div>
+      <div class="rv d1"><i>2</i><b>מגדירים תקרה</b><p>אשף של דקה: הכנסות, קבועות וחלוקת היתרה. סט קטגוריות ישראלי מוכן לעריכה.</p></div>
+      <div class="rv d2"><i>3</i><b>רושמים תוך כדי</b><p>מקלדת מספרים גדולה, קטגוריה בנגיעה. שתי שניות, ובני הבית כבר רואים.</p></div>
+    </div>
+    <div class="invite rv" id="invite">
+      <span class="eyebrow plain" >ההרשמה פתוחה</span>
+      <h2>החודש הבא<br>יכול להתחיל אחרת.</h2>
+      <form class="signup" action="/" method="get" data-signup>
+        <input type="hidden" name="signup" value="1">
+        <div class="field">
+          <label for="email-cta">כתובת אימייל</label>
+          <input id="email-cta" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" dir="ltr" required>
+        </div>
+        <button class="btn-gold" type="submit">פתיחת חשבון</button>
+      </form>
+      <p class="fine">גרסה מוקדמת. בלי פרסומות, בלי לחבר את הבנק, ייצוא ומחיקה בכל עת.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ שאלות ============ -->
+<section class="faq" id="faq">
+  <div class="wrap">
+    <div class="side"><span class="eyebrow">שאלות</span><h2>לפני<br>שנרשמים.</h2></div>
+    <div class="qs">
+      <details><summary>כמה זה עולה?</summary><p>[מחיר ותנאים — להשלים]</p></details>
+      <details><summary>צריך לחבר את הבנק?</summary><p>לא. רושמים בעצמכם, ולא מוסרים פרטי בנק או כרטיס אשראי.</p></details>
+      <details><summary>בן או בת הזוג יראו הכול?</summary><p>את התקציב המשותף כן, זו כל המטרה. יעדי חיסכון אישיים רואים רק אתם.</p></details>
+      <details><summary>יש אפליקציה?</summary><p>מוסיפים את האתר למסך הבית בטלפון, והוא נפתח כמו אפליקציה.</p></details>
+      <details><summary>ואם ארצה לעזוב?</summary><p>מייצאים את כל הנתונים ומוחקים את החשבון מתוך ההגדרות, בלי לבקש מאף אחד.</p></details>
+      <details><summary>זו גרסה סופית?</summary><p>לא. זו גרסה מוקדמת ועשויים להיות באגים, לכן אל תוותרו על דפי החשבון מהבנק.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="brandline"><svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1l8 8-8 8-8-8z" fill="none" stroke="#C9A96E" stroke-width="1.2"/></svg><span>הכיס המשפחתי · thefamilypocket.com</span></div>
+    <nav aria-label="קישורים"><a href="#privacy">גילוי נאות</a><a href="#faq">תנאי שימוש</a><a href="#top">כניסה לחשבון</a></nav>
+  </div>
+</footer>
+
+<script>
+(function(){
+  document.querySelectorAll('[data-signup]').forEach(f=>f.addEventListener('submit',e=>{e.preventDefault();const b=f.querySelector('button');b.textContent='בתצוגה המקדימה ההרשמה לא פעילה';setTimeout(()=>b.textContent='פתיחת חשבון',2600)}));
+  const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* הופעה בגלילה */
+  const rv=document.querySelectorAll('.rv');
+  if(still||!('IntersectionObserver' in window)){rv.forEach(e=>e.classList.add('in'))}
+  else{
+    document.documentElement.classList.add('js-rv');
+    const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{rootMargin:'0px 0px -12% 0px'});
+    rv.forEach(e=>io.observe(e));
+  }
+
+  /* מה שנמצא על המסך — רק הוא רץ. לשונית ברקע או אזור שלא רואים לא שורפים סוללה. */
+  const visible=new WeakMap();
+  const vio='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>visible.set(e.target,e.isIntersecting))):null;
+  const watch=el=>{visible.set(el,true);if(vio)vio.observe(el)};
+  const live=el=>!document.hidden&&visible.get(el)!==false;
+
+  /* מסכים מתחלפים בטלפון */
+  document.querySelectorAll('[data-cycle]').forEach(box=>{
+    if(still)return;
+    const imgs=[...box.querySelectorAll('img')];let i=0;watch(box);
+    setInterval(()=>{if(!live(box))return;imgs[i].classList.remove('on');i=(i+1)%imgs.length;imgs[i].classList.add('on')},+box.dataset.cycle);
+  });
+
+  /* מחשב: נפתח תוך כדי גלילה, והמסכים מתחלפים */
+  const lap=document.getElementById('laptop'), lid=lap.querySelector('.lid');
+  const limgs=[...document.querySelectorAll('#lapScreen img')], lbtn=[...document.querySelectorAll('[data-lap]')];
+  let li=0,lapTimer=null;
+  function showLap(n){limgs[li].classList.remove('on');li=n;limgs[li].classList.add('on');
+    lbtn.forEach((b,k)=>b.setAttribute('aria-pressed',k===li?'true':'false'))}
+  lbtn.forEach(b=>b.addEventListener('click',()=>{showLap(+b.dataset.lap);clearInterval(lapTimer)}));
+  if(!still){
+    watch(lap);
+    lapTimer=setInterval(()=>{if(live(lap))showLap((li+1)%limgs.length)},4600);
+    let ticking=false;
+    const tilt=()=>{ticking=false;const r=lap.getBoundingClientRect(),vh=innerHeight;
+      const p=Math.min(1,Math.max(0,(vh-r.top)/(vh*.75)));lid.style.setProperty('--tilt',(16*(1-p)).toFixed(2)+'deg')};
+    addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(tilt)}},{passive:true});tilt();
+  }
+
+  /* רישום מהיר: המסכים האמיתיים, פריים אחרי פריים, עם נקודת נגיעה */
+  const box=document.getElementById('entry');
+  const frames=[...box.querySelectorAll('img')], tap=document.getElementById('tap');
+  const steps=[...document.querySelectorAll('#steps li')];
+  /* [פריים, זמן תצוגה במ"ש, נגיעה לפני המעבר (x%,y%) או null, שלב] */
+  const SEQ=[[0,900,[50,35.7],0],[1,380,[50,43.5],0],[2,380,[50,59.1],0],[3,650,[19,71.2],1],[4,650,[50,95.7],2],[5,2600,null,2]];
+  const setStep=s=>steps.forEach((li,k)=>li.classList.toggle('on',k===s));
+  if(still){frames.forEach((f,k)=>f.classList.toggle('on',k===5));setStep(2);return}
+  watch(box);
+  let k=0;
+  function show(n){frames.forEach((f,j)=>f.classList.toggle('on',j===n))}
+  function next(){
+    if(!live(box)){setTimeout(next,600);return}
+    const [f,hold,pt,st]=SEQ[k];
+    show(f);setStep(st);
+    setTimeout(()=>{
+      if(pt){tap.style.left=pt[0]+'%';tap.style.top=pt[1]+'%';tap.classList.remove('go');void tap.offsetWidth;tap.classList.add('go')}
+      setTimeout(()=>{k=(k+1)%SEQ.length;next()},pt?220:0);
+    },hold);
+  }
+  next();
+})();
+</script>
+
+</body></html>
