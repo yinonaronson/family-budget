@@ -1,5 +1,12 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>הכיס המשפחתי · דף נחיתה</title>
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E0D0B">
+<title>הכיס המשפחתי · הצטרפות</title>
+<meta name="description" content="הכיס המשפחתי — תקציב משפחתי משותף, בזמן אמת.">
+<link rel="icon" href="/icon-192.png">
 <style>
 /* ---------- גופנים: מוגשים מאותו שרת, בלי פנייה למקור זר ---------- */
 @font-face{font-family:Serif;font-weight:200;font-display:swap;src:url(fonts/noto-serif-hebrew-hebrew-200-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
@@ -279,6 +286,9 @@ footer .brandline{display:flex;align-items:center;gap:12px}
   .laptop .lid{transform:none!important}
 }
 </style>
+</head>
+<body dir="rtl" lang="he">
+
 
 <a class="skip" href="#main">דילוג לתוכן</a>
 
@@ -292,7 +302,7 @@ footer .brandline{display:flex;align-items:center;gap:12px}
       <a href="#see">המערכת</a><a href="#privacy">פרטיות</a><a href="#begin">איך מתחילים</a><a href="#faq">שאלות</a>
     </nav>
     <div class="navcta">
-      <a class="in" href="#top">כניסה</a>
+      <a class="in" href="/">כניסה</a>
       <a class="btn-line" href="#invite">פתיחת חשבון</a>
     </div>
   </div>
@@ -314,7 +324,7 @@ footer .brandline{display:flex;align-items:center;gap:12px}
         </div>
         <button class="btn-gold" type="submit">פתיחת חשבון</button>
       </form>
-      <p class="fine">בפתיחת חשבון אתם מאשרים את <a href="#faq">תנאי השימוש</a> · <a href="#privacy">מה קורה לנתונים שלכם</a></p>
+      <p class="fine">בפתיחת חשבון אתם מאשרים את <a href="/terms/">תנאי השימוש</a> · <a href="#privacy">מה קורה לנתונים שלכם</a></p>
     </div>
 
     <div class="stage" aria-hidden="true">
@@ -491,13 +501,12 @@ footer .brandline{display:flex;align-items:center;gap:12px}
 <footer>
   <div class="wrap">
     <div class="brandline"><svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1l8 8-8 8-8-8z" fill="none" stroke="#C9A96E" stroke-width="1.2"/></svg><span>הכיס המשפחתי · thefamilypocket.com</span></div>
-    <nav aria-label="קישורים"><a href="#privacy">גילוי נאות</a><a href="#faq">תנאי שימוש</a><a href="#top">כניסה לחשבון</a></nav>
+    <nav aria-label="קישורים"><a href="#privacy">גילוי נאות</a><a href="/terms/">תנאי שימוש</a><a href="/">כניסה לחשבון</a></nav>
   </div>
 </footer>
 
 <script>
 (function(){
-  document.querySelectorAll('[data-signup]').forEach(f=>f.addEventListener('submit',e=>{e.preventDefault();const b=f.querySelector('button');b.textContent='בתצוגה המקדימה ההרשמה לא פעילה';setTimeout(()=>b.textContent='פתיחת חשבון',2600)}));
   const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* הופעה בגלילה */
