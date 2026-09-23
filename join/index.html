@@ -70,6 +70,9 @@ p{margin:0}
 .signup input::placeholder{color:#6E685C}
 .signup input:focus{outline:none;border-bottom-color:var(--gold)}
 .btn-gold{height:56px;padding:0 34px;border:0;border-radius:2px;background:var(--gold);color:var(--ground);font:600 16px var(--sans);letter-spacing:.5px;cursor:pointer;transition:background .3s,transform .3s var(--ease)}
+a.btn-gold{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;align-self:flex-start}
+.invite a.btn-gold{align-self:center;margin-top:12px}
+a.btn-gold:hover{color:var(--ground)}
 .btn-gold:hover{background:var(--gold-hi)}
 .btn-gold:active{transform:scale(.98)}
 .fine{font-size:13px;color:var(--faint)}
@@ -231,6 +234,7 @@ footer .brandline{display:flex;align-items:center;gap:12px}
   .faq .wrap{flex-direction:column;gap:40px}.faq .side{width:auto}
 }
 @media (max-width:760px){
+  a.btn-gold{align-self:stretch}
   :root{--pad:20px}
   .nav .wrap{height:68px}.brand span{font-size:19px}
   .navcta{gap:16px}.navcta .btn-line{display:none}
@@ -303,7 +307,7 @@ footer .brandline{display:flex;align-items:center;gap:12px}
     </nav>
     <div class="navcta">
       <a class="in" href="/">כניסה</a>
-      <a class="btn-line" href="#invite">פתיחת חשבון</a>
+      <a class="btn-line" href="https://mrng.to/ga2YDjPgcN">פתיחת חשבון</a>
     </div>
   </div>
 </header>
@@ -316,14 +320,7 @@ footer .brandline{display:flex;align-items:center;gap:12px}
       <span class="eyebrow">גרסה מוקדמת · ההרשמה פתוחה</span>
       <h1>לדעת לאן<br>הולך הכסף,<br><span class="gold">בזמן שהוא הולך.</span></h1>
       <p class="sub">תקציב משפחתי שכל בני הבית מנהלים יחד, מאותו מסך ובאותו רגע. תקרה לכל קטגוריה, רישום בשתי שניות, והתראה שמגיעה לפני החריגה ולא אחריה.</p>
-      <form class="signup" action="/" method="get" data-signup>
-        <input type="hidden" name="signup" value="1">
-        <div class="field">
-          <label for="email-hero">כתובת אימייל</label>
-          <input id="email-hero" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" dir="ltr" required>
-        </div>
-        <button class="btn-gold" type="submit">פתיחת חשבון</button>
-      </form>
+      <a class="btn-gold pay" href="https://mrng.to/ga2YDjPgcN">פתיחת חשבון · 49 ש״ח לחודש</a>
       <p class="fine">בפתיחת חשבון אתם מאשרים את <a href="/terms/">תנאי השימוש</a> · <a href="#privacy">מה קורה לנתונים שלכם</a></p>
     </div>
 
@@ -469,14 +466,7 @@ footer .brandline{display:flex;align-items:center;gap:12px}
     <div class="invite rv" id="invite">
       <span class="eyebrow plain" >ההרשמה פתוחה</span>
       <h2>החודש הבא<br>יכול להתחיל אחרת.</h2>
-      <form class="signup" action="/" method="get" data-signup>
-        <input type="hidden" name="signup" value="1">
-        <div class="field">
-          <label for="email-cta">כתובת אימייל</label>
-          <input id="email-cta" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" dir="ltr" required>
-        </div>
-        <button class="btn-gold" type="submit">פתיחת חשבון</button>
-      </form>
+      <a class="btn-gold pay" href="https://mrng.to/ga2YDjPgcN">פתיחת חשבון · 49 ש״ח לחודש</a>
       <p class="fine">גרסה מוקדמת. בלי פרסומות, בלי לחבר את הבנק, ייצוא ומחיקה בכל עת.</p>
     </div>
   </div>
