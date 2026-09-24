@@ -253,6 +253,8 @@ svg{display:block;width:100%;overflow:visible}
 .tip-row{display:flex;align-items:center;gap:7px;margin-top:4px}
 code{background:var(--plane-2);padding:1px 6px;border-radius:6px;font-size:12.5px;word-break:break-all}
 footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16px 20px}
+.iglink{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 10px;color:var(--text-secondary);font-size:13px;font-weight:600;text-decoration:none;border-radius:10px}
+.iglink:hover{color:var(--s1)}
 @media(max-width:719px){footer.note{padding-bottom:90px}}
 .toast{position:fixed;inset-inline:0;bottom:0;z-index:80;display:flex;justify-content:center;pointer-events:none;padding-bottom:26px}
 @media(max-width:719px){.toast{padding-bottom:calc(96px + env(safe-area-inset-bottom))}}
@@ -2218,13 +2220,18 @@ function renderNav(){
   document.getElementById('tabs').innerHTML=NAV.map(([k,i,l])=>`<button data-tab="${k}" aria-selected="${k===tab}"><span>${i}</span>${l}</button>`).join('');
   document.getElementById('mobnav').innerHTML=NAV.map(([k,i,l])=>`<button data-tab="${k}" aria-selected="${k===tab}"><span class="ni">${i}</span>${l}</button>`).join('');
 }
+/* האינסטגרם שלנו — בתחתית כל מסך */
+const IG_URL='https://www.instagram.com/thefamilypocket.il';
+const IG_LINK=`<a class="iglink" href="${IG_URL}" target="_blank" rel="noopener" aria-label="הכיס המשפחתי באינסטגרם (נפתח בחלון חדש)">
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+  <span dir="ltr">@thefamilypocket.il</span></a>`;
 function go(t){tab=t;render();window.scrollTo({top:0})}
 function render(){
   document.getElementById('mLbl').textContent=monthLabel(month);
   renderNav();setSyncUI();
-  document.getElementById('footNote').innerHTML=HH
-    ?`${esc(HH.name)} · הנתונים שמורים בשרת ומסונכרנים בין כל המכשירים`
-    :'';
+  document.getElementById('footNote').innerHTML=(HH
+    ?`<div>${esc(HH.name)} · הנתונים שמורים בשרת ומסונכרנים בין כל המכשירים</div>`
+    :'')+IG_LINK;
   /* guide אינו טאב בניווט — מגיעים אליו מכרטיס הטיפ ומההגדרות.
      שמונה טאבים בשורה אחת במובייל הופכים את כולם לבלתי קריאים,
      והמדריך אינו פעולה יומית. */
