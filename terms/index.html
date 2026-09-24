@@ -56,6 +56,16 @@ footer nav{display:flex;gap:28px}footer nav a{color:var(--muted)}
 }
 .logo{display:block;border-radius:22%;flex-shrink:0}
 </style>
+<script>
+/* תמיד נפתחים בראש הדף: בלי שחזור גלילה של הדפדפן, ובלי קפיצה לעוגן (#) שנשאר בכתובת */
+(function(){
+  try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}
+  if(location.hash){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}
+  const top=()=>window.scrollTo({top:0,left:0,behavior:'instant'});
+  top();addEventListener('DOMContentLoaded',top);addEventListener('load',top);
+  addEventListener('pageshow',e=>{if(e.persisted)top()});
+})();
+</script>
 </head>
 <body>
 <header class="nav"><div class="wrap">
