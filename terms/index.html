@@ -3,52 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0E0D0B">
+<meta name="theme-color" content="#0d0d0d">
 <title>הכיס המשפחתי · תנאי שימוש</title>
 <meta name="description" content="תנאי השימוש בשירות הכיס המשפחתי.">
 <link rel="icon" href="/icon-192.png">
 <style>
-@font-face{font-family:Serif;font-weight:300;font-display:swap;src:url(/join/fonts/noto-serif-hebrew-hebrew-300-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Serif;font-weight:200;font-display:swap;src:url(/join/fonts/noto-serif-hebrew-hebrew-200-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Serif;font-weight:300;font-display:swap;src:url(/join/fonts/noto-serif-hebrew-latin-300-normal.woff2) format('woff2')}
-@font-face{font-family:Sans;font-weight:300;font-display:swap;src:url(/join/fonts/heebo-hebrew-300-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Sans;font-weight:500;font-display:swap;src:url(/join/fonts/heebo-hebrew-500-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Sans;font-weight:300;font-display:swap;src:url(/join/fonts/heebo-latin-300-normal.woff2) format('woff2')}
-@font-face{font-family:Sans;font-weight:500;font-display:swap;src:url(/join/fonts/heebo-latin-500-normal.woff2) format('woff2')}
-:root{--ground:#0E0D0B;--line:#2B2821;--ivory:#F2EDE3;--text-2:#C9C2B4;--muted:#A8A194;--faint:#8A8478;--gold:#C9A96E;--gold-hi:#E2C891;
-  --serif:Serif,'Noto Serif Hebrew',Georgia,serif;--sans:Sans,Heebo,system-ui,-apple-system,'Segoe UI',sans-serif;--pad:112px;color-scheme:dark}
+:root{--ground:#0d0d0d;--raised:#1a1a19;--line:rgba(255,255,255,.10);--ivory:#fff;--text-2:#c3c2b7;--muted:#c3c2b7;--faint:#898781;--gold:#3987e5;--gold-hi:#5d9eed;
+  --serif:system-ui,-apple-system,"Segoe UI",Heebo,sans-serif;--sans:system-ui,-apple-system,"Segoe UI",Heebo,sans-serif;--pad:112px;--r:14px;color-scheme:dark}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--ground);color:var(--ivory);font-family:var(--sans);font-weight:300;line-height:1.75}
+body{margin:0;background:var(--ground);color:var(--ivory);font-family:var(--sans);font-weight:400;line-height:1.75}
 a{color:var(--gold)}a:hover{color:var(--gold-hi)}
 :focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .wrap{padding-inline:var(--pad);max-width:1440px;margin-inline:auto}
-.nav{border-bottom:1px solid #24211B}
+.nav{border-bottom:1px solid var(--line)}
 .nav .wrap{height:88px;display:flex;align-items:center;justify-content:space-between;gap:24px}
 .brand{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ivory)}
-.brand span{font-family:var(--serif);font-weight:300;font-size:23px;letter-spacing:1px}
+.brand span{font-weight:700;font-size:20px}
 .back{font-size:15px;color:var(--muted);text-decoration:none}.back:hover{color:var(--ivory)}
 main{padding-block:88px 120px}
 .doc{max-width:760px}
-.eyebrow{display:inline-flex;align-items:center;gap:14px;font-size:14px;font-weight:500;letter-spacing:1px;color:var(--gold)}
-.eyebrow::before{content:"";width:40px;height:1px;background:var(--gold)}
-h1{margin:22px 0 18px;font-family:var(--serif);font-weight:200;font-size:clamp(44px,5.6vw,80px);line-height:1.05}
+.eyebrow{display:inline-flex;padding:6px 13px;border-radius:999px;background:color-mix(in srgb,var(--gold) 12%,transparent);font-size:13px;font-weight:600;color:var(--gold)}
+.back{font-weight:600}
+h1{margin:22px 0 18px;font-weight:800;letter-spacing:-.03em;font-size:clamp(44px,5.6vw,80px);line-height:1.05}
 .meta{color:var(--faint);font-size:14px}
 .intro{margin:40px 0 0;font-size:19px;color:var(--text-2)}
-.toc{margin:48px 0 0;padding:28px 0;border-block:1px solid var(--line);columns:2;column-gap:48px;list-style:none;counter-reset:t}
+.toc{margin:48px 0 0;padding:24px 28px;border:1px solid var(--line);border-radius:var(--r);background:var(--raised);columns:2;column-gap:48px;list-style:none;counter-reset:t}
 .toc li{counter-increment:t;break-inside:avoid;padding:4px 0}
-.toc li::before{content:counter(t) ".";display:inline-block;width:28px;font-family:var(--serif);color:var(--gold)}
+.toc li::before{content:counter(t) ".";display:inline-block;width:36px;font-weight:700;color:var(--gold)}
 .toc a{color:var(--muted);text-decoration:none}.toc a:hover{color:var(--ivory)}
 section{padding-top:56px;counter-increment:s}
 body{counter-reset:s}
-h2{margin:0 0 16px;font-family:var(--serif);font-weight:300;font-size:30px;line-height:1.3;display:flex;gap:18px;align-items:baseline}
-h2::before{content:counter(s);font-size:18px;color:var(--gold);min-width:24px}
+h2{margin:0 0 16px;font-weight:800;letter-spacing:-.02em;font-size:26px;line-height:1.3;display:flex;gap:18px;align-items:baseline}
+h2::before{content:counter(s);font-size:18px;color:var(--gold);min-width:24px;font-weight:800}
 p,li{font-size:17px;color:var(--text-2)}
 p{margin:0 0 14px}
 ul{margin:0 0 14px;padding-inline-start:22px}
 li{margin-bottom:8px}li::marker{color:var(--gold)}
-strong{font-weight:500;color:var(--ivory)}
-.note{margin-top:14px;padding:18px 22px;border-inline-start:2px solid var(--gold);background:#17150F;font-size:16px}
+strong{font-weight:700;color:var(--ivory)}
+.note{margin-top:14px;padding:18px 22px;border:1px solid var(--line);border-inline-start:3px solid var(--gold);border-radius:var(--r);background:var(--raised);font-size:16px}
 footer .wrap{padding-block:40px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:14px;color:var(--faint)}
 footer nav{display:flex;gap:28px}footer nav a{color:var(--muted)}
 @media (max-width:760px){
