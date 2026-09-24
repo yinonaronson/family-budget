@@ -281,6 +281,20 @@ footer .wrap{border-color:var(--line)}
 .btn-gold:hover,a.btn-gold:hover{background:#1f64b9}
 footer nav a{color:var(--text-2)}
 
+/* ---------- הודעת עוגיות ונגישות ---------- */
+.notice{position:fixed;z-index:80;inset-inline:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:520px;margin-inline:auto;
+  display:flex;gap:16px;align-items:center;padding:16px 18px;border-radius:16px;background:var(--raised);border:1px solid var(--line);
+  box-shadow:var(--shadow-lg);font-size:14px;line-height:1.55;color:var(--text-2);
+  transform:translateY(20px);opacity:0;transition:opacity .4s var(--ease),transform .4s var(--ease)}
+.notice.on{opacity:1;transform:none}
+.notice[hidden]{display:none}
+.notice p{flex:1;margin:0}
+.notice b{color:var(--ivory);font-weight:600}
+.notice button{flex:none;min-height:44px;padding:0 20px;border:0;border-radius:11px;background:#2570cc;color:#fff;font:600 15px var(--sans);cursor:pointer}
+.notice button:hover{background:#1f64b9}
+@media (max-width:520px){.notice{flex-direction:column;align-items:stretch;gap:12px}.notice button{width:100%}}
+@media (prefers-reduced-motion:reduce){.notice{transition:none}}
+
 @media (max-width:1180px){
   :root{--pad:56px}
   .links{display:none}
@@ -555,15 +569,33 @@ footer nav a{color:var(--text-2)}
 </section>
 </main>
 
+<div class="notice" id="notice" role="region" aria-label="עוגיות ונגישות" hidden>
+  <p><b>אין כאן עוגיות מעקב.</b> האתר לא משתמש בפרסום, במדידה או בקוד של צד שלישי.
+    <a href="/privacy/">פרטיות ועוגיות</a> · <a href="/accessibility/">הצהרת נגישות</a></p>
+  <button type="button" id="noticeOk">הבנתי</button>
+</div>
+
 <footer>
   <div class="wrap">
     <div class="brandline"><img class="logo" src="img/logo.png" width="22" height="22" alt=""><span>הכיס המשפחתי · thefamilypocket.com</span></div>
-    <nav aria-label="קישורים"><a href="/privacy/">פרטיות ועוגיות</a><a href="/terms/">תנאי שימוש</a><a href="/accessibility/">נגישות</a><a href="/">כניסה לחשבון</a></nav>
+    <nav aria-label="קישורים"><a href="/terms/">תנאי שימוש</a><a href="/">כניסה לחשבון</a></nav>
   </div>
 </footer>
 
 <script>
 (function(){
+
+  /* הודעת עוגיות ונגישות: מופיעה פעם אחת. נשמר רק שסגרתם אותה. */
+  (function(){
+    const K='hakis-join-notice',n=document.getElementById('notice');if(!n)return;
+    let seen='';try{seen=localStorage.getItem(K)||''}catch(e){}
+    if(seen)return;
+    n.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>n.classList.add('on')));
+    document.getElementById('noticeOk').onclick=()=>{
+      try{localStorage.setItem(K,new Date().toISOString().slice(0,10))}catch(e){}
+      n.classList.remove('on');setTimeout(()=>{n.hidden=true},400);
+    };
+  })();
   const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* הופעה בגלילה */
