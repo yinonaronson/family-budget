@@ -3,36 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0E0D0B">
+<meta name="theme-color" content="#0d0d0d">
 <title>הכיס המשפחתי · הצטרפות</title>
 <meta name="description" content="הכיס המשפחתי — תקציב משפחתי משותף, בזמן אמת.">
 <link rel="icon" href="/icon-192.png">
 <style>
 /* ---------- גופנים: מוגשים מאותו שרת, בלי פנייה למקור זר ---------- */
-@font-face{font-family:Serif;font-weight:200;font-display:swap;src:url(fonts/noto-serif-hebrew-hebrew-200-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Serif;font-weight:300;font-display:swap;src:url(fonts/noto-serif-hebrew-hebrew-300-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Serif;font-weight:400;font-display:swap;src:url(fonts/noto-serif-hebrew-hebrew-400-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Serif;font-weight:200;font-display:swap;src:url(fonts/noto-serif-hebrew-latin-200-normal.woff2) format('woff2')}
-@font-face{font-family:Serif;font-weight:300;font-display:swap;src:url(fonts/noto-serif-hebrew-latin-300-normal.woff2) format('woff2')}
-@font-face{font-family:Serif;font-weight:400;font-display:swap;src:url(fonts/noto-serif-hebrew-latin-400-normal.woff2) format('woff2')}
-@font-face{font-family:Sans;font-weight:300;font-display:swap;src:url(fonts/heebo-hebrew-300-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Sans;font-weight:400;font-display:swap;src:url(fonts/heebo-hebrew-400-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Sans;font-weight:500;font-display:swap;src:url(fonts/heebo-hebrew-500-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Sans;font-weight:600;font-display:swap;src:url(fonts/heebo-hebrew-600-normal.woff2) format('woff2');unicode-range:U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
-@font-face{font-family:Sans;font-weight:300;font-display:swap;src:url(fonts/heebo-latin-300-normal.woff2) format('woff2')}
-@font-face{font-family:Sans;font-weight:400;font-display:swap;src:url(fonts/heebo-latin-400-normal.woff2) format('woff2')}
-@font-face{font-family:Sans;font-weight:500;font-display:swap;src:url(fonts/heebo-latin-500-normal.woff2) format('woff2')}
-@font-face{font-family:Sans;font-weight:600;font-display:swap;src:url(fonts/heebo-latin-600-normal.woff2) format('woff2')}
 
 :root{
-  --ground:#0E0D0B; --raised:#17150F; --deep:#14130F; --line:#2B2821; --line-2:#3A362D;
-  --ivory:#F2EDE3; --text-2:#B8B1A3; --muted:#A8A194; --faint:#8A8478;
-  --gold:#C9A96E; --gold-hi:#E2C891; --gold-deep:#7A5F2E; --warn:#E8A08F;
-  --serif:Serif,'Noto Serif Hebrew','David Libre',Georgia,serif;
-  --sans:Sans,Heebo,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --ground:#f4f4f1; --raised:#fcfcfb; --deep:#eceae5; --line:rgba(11,11,11,.10); --line-2:#c3c2b7;
+  --ivory:#0b0b0b; --text-2:#52514e; --muted:#52514e; --faint:#898781;
+  --gold:#2a78d6; --gold-hi:#1f64b9; --gold-deep:#2a78d6; --warn:#ec835a; --good:#0ca30c;
+  --shadow:0 1px 2px rgba(11,11,11,.06),0 8px 24px rgba(11,11,11,.05);
+  --shadow-lg:0 12px 40px rgba(11,11,11,.18);
+  --r:14px;
+  --serif:system-ui,-apple-system,"Segoe UI",Heebo,sans-serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Heebo,sans-serif;
   --pad:112px; --ease:cubic-bezier(.2,.7,.2,1);
+  color-scheme:light;
+}
+:root{
+  --ground:#0d0d0d; --raised:#1a1a19; --deep:#141413; --line:rgba(255,255,255,.10); --line-2:#383835;
+  --ivory:#ffffff; --text-2:#c3c2b7; --muted:#c3c2b7; --faint:#898781;
+  --gold:#3987e5; --gold-hi:#5d9eed; --gold-deep:#5d9eed;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  --shadow-lg:0 12px 40px rgba(0,0,0,.6);
   color-scheme:dark;
 }
+
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--ground);color:var(--ivory);font-family:var(--sans);font-weight:300;line-height:1.6;overflow-x:hidden}
@@ -224,6 +222,62 @@ footer .brandline{display:flex;align-items:center;gap:12px}
 .row.in .crop img{transform:translateY(-18px)}
 
 /* ---------- מסכים ---------- */
+/* ---------- שפת העיצוב של האפליקציה ---------- */
+body{font-weight:400;line-height:1.6}
+h1,h2,h3{font-weight:800;letter-spacing:-.03em}
+.hero h1{line-height:1.08}
+.lead,.hero .sub{color:var(--text-2)}
+.eyebrow{align-self:flex-start;padding:6px 13px;border-radius:999px;background:color-mix(in srgb,var(--gold) 10%,transparent);font-weight:600;letter-spacing:0;font-size:13px}
+.eyebrow::before{display:none}
+.nav{background:color-mix(in srgb,var(--ground) 86%,transparent);border-bottom:1px solid var(--line)}
+.brand span{font-weight:700;font-size:20px;letter-spacing:0}
+.links a{font-weight:600}
+.navcta .in{font-weight:600}
+.btn-line{border-radius:11px;font-weight:600;letter-spacing:0;background:var(--raised);border-color:var(--line);color:var(--ivory);box-shadow:var(--shadow)}
+.btn-line:hover{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn-gold{border-radius:12px;color:#fff;font-weight:700;letter-spacing:0;box-shadow:0 1px 2px rgba(11,11,11,.08),0 8px 20px color-mix(in srgb,var(--gold) 30%,transparent)}
+.btn-gold:hover,a.btn-gold:hover{background:var(--gold-hi);color:#fff}
+.float{border-radius:var(--r);box-shadow:var(--shadow-lg)}
+.f-alert{background:var(--raised);color:var(--ivory);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent)}
+.f-alert small{color:var(--warn);font-weight:700;letter-spacing:0}
+.f-alert b{font-weight:700;font-size:17px}
+.f-alert span{color:var(--faint)}
+.f-sync{background:var(--raised);border:1px solid var(--line)}
+.f-sync b{font-weight:600}
+.av{background:var(--gold);border:0;color:#fff;font-weight:700}
+.tap{background:color-mix(in srgb,var(--gold) 35%,transparent)}
+.stage .frame{border-radius:28px;background:color-mix(in srgb,var(--gold) 6%,transparent);border-color:var(--line)}
+.principles{border-color:var(--line)}
+.principles div{font-weight:700;font-size:21px}
+.principles i{font-weight:800;color:var(--gold)}
+.tabs-demo button{border-radius:11px;font-weight:600;background:var(--raised);border-color:var(--line);box-shadow:var(--shadow)}
+.tabs-demo button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#fff}
+.steps li,.steps li:last-child{border-color:var(--line)}
+.steps li b{font-weight:700}
+.steps li i{font-weight:800}
+.row,.row:last-child{border-color:var(--line)}
+.row .num{font-weight:800;font-size:52px}
+.row h3{font-weight:800}
+.crop{border-radius:20px;border-color:var(--line);box-shadow:var(--shadow)}
+.statement{background:var(--raised);color:var(--ivory);border-block:1px solid var(--line)}
+.statement p.big{font-weight:800;letter-spacing:-.03em}
+.statement p.big span{color:var(--gold)}
+.statement p.small{color:var(--text-2)}
+.grid3{border-color:var(--line)}
+.grid3>div{border-color:var(--line)!important}
+.grid3 b{font-weight:700}
+.grid3 .honest span{color:var(--ivory)}
+.begin{background:var(--deep);border-block:1px solid var(--line)}
+.three i{font-weight:800}
+.three b{font-weight:700}
+.invite .eyebrow{align-self:center}
+.invite{border:1px solid var(--line);border-radius:24px;background:var(--raised);box-shadow:var(--shadow)}
+.qs details,.qs details:nth-last-child(-n+2){border-color:var(--line)}
+.qs summary{font-weight:600;font-size:19px}
+.qs summary::after{font-weight:400}
+footer .wrap{border-color:var(--line)}
+footer nav a{color:var(--text-2)}
+
 @media (max-width:1180px){
   :root{--pad:56px}
   .links{display:none}
