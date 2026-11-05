@@ -4688,6 +4688,14 @@ function disclosureCard(){
 
 /* ==================== הגדרות ==================== */
 function installCard(){
+  /* בתוך אפליקציית האייפון/אנדרואיד: אין מה להתקין, יש הגדרות של האפליקציה עצמה
+     (נעילה ב-Face ID ותזכורת יומית). הכפתור מבקש מהאפליקציה לפתוח אותן. */
+  if(window.ReactNativeWebView)return `
+  <div class="card">
+    <h2>📱 הגדרות האפליקציה</h2>
+    <p class="sub">נעילה בזיהוי פנים או טביעת אצבע, ותזכורת יומית לרשום הוצאות.</p>
+    <button class="btn" id="nativeSettingsBtn">פתיחת הגדרות האפליקציה</button>
+  </div>`;
   if(STANDALONE)return `
   <div class="card">
     <h2>📲 מותקנת כאפליקציה</h2>
@@ -4943,6 +4951,9 @@ function wireSettings(){
     toast(error?('שגיאה: '+error.message):'שלחנו לכם קישור לשינוי סיסמה ✓');
   };
 
+  const nsb=document.getElementById('nativeSettingsBtn');
+  if(nsb)nsb.onclick=()=>window.ReactNativeWebView.postMessage(JSON.stringify({type:'openSettings'}));
+
   const ib=document.getElementById('installBtn');
   if(ib)ib.onclick=async()=>{
     if(!deferredInstall)return;
@@ -5104,7 +5115,10 @@ function wireCashSettings(){
   };
 }
 
-function dl(name,txt,type){const a=document.createElement('a');
+function dl(name,txt,type){
+  /* באפליקציית הטלפון אין "הורדה" של blob — האפליקציה שומרת את הקובץ ופותחת שיתוף */
+  if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:'file',name,mime:type,text:'\ufeff'+txt}));return}
+  const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type}));a.download=name;a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 /* ייצוא מלא. עד עכשיו הקובץ הזה החסיר יעדים, הפקדות, נכסים
