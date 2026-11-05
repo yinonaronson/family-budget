@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "הכיס המשפחתי",
+    "slug": "family-pocket",
+    "scheme": "familypocket",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yinonaronson.familypocket",
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "he",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Face ID locks the app so your family's financial data stays private."
+      }
+    },
+    "android": {
+      "package": "com.yinonaronson.familypocket",
+      "adaptiveIcon": {
+        "backgroundColor": "#2A78D5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "locales": {
+      "he": "./locales/he.json"
+    },
+    "extra": {
+      "supportsRTL": true,
+      "forcesRTL": true
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-localization",
+      [
+        "expo-local-authentication",
+        { "faceIDPermission": "זיהוי הפנים משמש לנעילת האפליקציה, כדי שהנתונים הכספיים של המשפחה יישארו רק שלכם." }
+      ],
+      [
+        "expo-splash-screen",
+        { "image": "./assets/splash-icon.png", "imageWidth": 140, "backgroundColor": "#f4f4f1" }
+      ],
+      "expo-sharing",
+      ["expo-notifications", { "color": "#2A78D6" }]
+    ],
+    "owner": "yinon22s-team"
+  }
+}
