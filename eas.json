@@ -6,7 +6,7 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "REPLACE_ASC_APP_ID",
+        "ascAppId": "6831146587",
         "appleTeamId": "2K94XDPAHM",
         "ascApiKeyPath": "./asc-key.p8",
         "ascApiKeyIssuerId": "64236e9c-ffb7-43de-9c13-799cea194767",

@@ -39,7 +39,7 @@ if errorlevel 1 goto :fail
 findstr /c:"projectId" app.json >nul
 if errorlevel 1 (
   echo.
-  echo [3/5] Creating the Expo project (first time only) ...
+  echo [3/5] Creating the Expo project - first time only ...
   call npx --yes eas-cli@latest init --non-interactive --force
   if errorlevel 1 goto :fail
 )
