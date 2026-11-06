@@ -734,10 +734,10 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
           ולא בדף החשבון של סוף החודש.</p>
         <div class="hero-cta">
           <button class="btn big" id="heroLogin">כניסה לחשבון</button>
-          <button class="btn ghost big" id="heroSignup" disabled>פתיחת חשבון · בקרוב</button>
+          <button class="btn ghost big" id="heroSignup">פתיחת חשבון חינם</button>
         </div>
-        <p class="sub hero-note">פתוח כרגע למשפחות מוזמנות בלבד. יש לכם קישור הזמנה?
-          פתחו אותו — והחשבון ייווצר בלחיצה.</p>
+        <p class="sub hero-note">פותחים חשבון, ומזמינים את בני הבית מההגדרות.
+          קיבלתם קישור הזמנה? פתחו אותו — ותצטרפו ישר למשפחה.</p>
       </div>
 
       <div class="hero-anim">
@@ -1804,24 +1804,17 @@ const DEFAULT_INCOME=[['💼','משכורת'],['🏦','קצבאות'],['➕','ה
 /* העברות — לא הוצאות. הכסף יוצא מהעו"ש אבל נשאר שלכם. */
 const DEFAULT_TRANSFER=[['🐷','חיסכון'],['📈','מניות והשקעות']];
 
+/* פתיחת משפחה חדשה למשתמש שאין לו אף משפחה. הכול קורה בפונקציה אחת
+   בשרת: משפחה, החבר הראשון (בעלים) וקטגוריות ברירת המחדל — או כלום.
+   אם כבר יש לו משפחה (שני מכשירים באותו רגע) השרת מחזיר את הקיימת. */
 async function createHousehold(name,displayName){
-  const hid=uid();
-  const {error:e1}=await sb.from('households').insert({id:hid,name:name||'המשפחה שלי',created_by:SESSION.user.id});
-  if(e1)throw e1;
-  const {error:e2}=await sb.from('household_members').insert({
-    household_id:hid,user_id:SESSION.user.id,display_name:displayName||'אני',role:'owner',slot:1});
-  if(e2)throw e2;
-  const rows=DEFAULT_CATS.map(([icon,n,b,slot,freq])=>
-      ({id:uid(),household_id:hid,kind:'expense',icon,name:n,budget:b,slot,freq}))
-    .concat(DEFAULT_INCOME.map(([icon,n],i)=>
-      ({id:uid(),household_id:hid,kind:'income',icon,name:n,budget:0,slot:i+1,freq:1})))
-    .concat(DEFAULT_TRANSFER.map(([icon,n],i)=>
-      ({id:uid(),household_id:hid,kind:'transfer',icon,name:n,budget:0,slot:i+1,freq:1})));
-  const {error:e3}=await sb.from('categories').insert(rows);
-  if(e3)throw e3;
-  HH={id:hid,name:name||'המשפחה שלי'};
-  await loadAll();
-  return HH;
+  const cats=DEFAULT_CATS.map(([icon,n,b,slot,freq])=>({kind:'expense',icon,name:n,budget:b,slot,freq}))
+    .concat(DEFAULT_INCOME.map(([icon,n],i)=>({kind:'income',icon,name:n,budget:0,slot:i+1,freq:1})))
+    .concat(DEFAULT_TRANSFER.map(([icon,n],i)=>({kind:'transfer',icon,name:n,budget:0,slot:i+1,freq:1})));
+  const {data,error}=await sb.rpc('create_my_household',
+    {p_name:name||'המשפחה שלי',p_display_name:displayName||'אני',p_categories:cats});
+  if(error)throw error;
+  return data;
 }
 
 /* ==================== הזמנות ==================== */
@@ -1859,10 +1852,10 @@ function hideAuth(){
   document.body.style.overflow='';
 }
 
-/* ההרשמה בהזמנה בלבד: בלי קישור הזמנה אין דרך לפתוח חשבון חדש,
-   ולכן גם אין דרך שמישהו זר ייצור לעצמו משפחה במערכת שלכם. */
+/* ההרשמה פתוחה: מי שנרשם בלי הזמנה מקבל משפחה חדשה וריקה משלו
+   (create_my_household בצד השרת). מי שהגיע מקישור הזמנה מצטרף למשפחה
+   שהזמינה אותו. אף אחד לא נכנס למשפחה של מישהו אחר בלי הזמנה. */
 function drawAuth(){
-  if(!pendingInvite&&authMode==='up')authMode='in';
   const inv=pendingInvite?`<p class="sub" style="background:color-mix(in srgb,var(--s1) 10%,transparent);
       border-radius:10px;padding:10px 12px;margin:0 0 14px">
       🎉 הוזמנתם למשפחה. ${authMode==='up'?'צרו חשבון':'התחברו'} וההזמנה תמומש אוטומטית.</p>`:'';
@@ -1886,11 +1879,9 @@ function drawAuth(){
       <button class="btn" id="aGo" style="width:100%;margin-top:8px">
         ${authMode==='up'?'יצירת חשבון':'כניסה'}</button>
       <div class="authalt">
-        ${pendingInvite
-          ? (authMode==='up'
-              ? 'כבר יש לכם חשבון? <a href="#" id="aSwitch">כניסה</a>'
-              : 'אין לכם חשבון? <a href="#" id="aSwitch">הרשמה</a>')
-          : 'ההרשמה כאן היא בהזמנה בלבד — בקשו מבן משפחה קישור הזמנה.'}
+        ${authMode==='up'
+          ? 'כבר יש לכם חשבון? <a href="#" id="aSwitch">כניסה</a>'
+          : 'אין לכם חשבון? <a href="#" id="aSwitch">פתיחת חשבון חינם</a>'}
         ${authMode==='in'?'<br><a href="#" id="aForgot">שכחתי סיסמה</a>':''}
       </div>
       ${/* מי שמצטרף חייב לדעת מה קורה לנתונים שלו *לפני* שהוא מוסר
@@ -1942,8 +1933,11 @@ function drawAuth(){
               <div class="authlogo">✉️</div>
               <h1>בדקו את המייל</h1>
               <p class="sub">שלחנו קישור אישור ל־<b dir="ltr">${esc(email)}</b>.
-                 לחצו עליו וחזרו לכאן.</p>
+                 לחצו עליו, ואז חזרו לכאן והתחברו עם המייל והסיסמה.</p>
+              <button class="btn" id="aDone" style="width:100%;margin-top:14px">אישרתי — לכניסה</button>
             </div>`;
+          authMode='in';
+          document.getElementById('aDone').onclick=()=>drawAuth();
           return;
         }
         SESSION=data.session;
@@ -1975,20 +1969,43 @@ async function afterAuth(nameHint){
     history.replaceState(null,'',location.pathname);
   }
   await loadHousehold();
+
+  /* משתמש חדש בלי הזמנה: פותחים לו משפחה משלו. אם הוא הגיע מהזמנה
+     שנכשלה לא פותחים אוטומטית — הוא בא להצטרף למשפחה מסוימת — אבל
+     נותנים לו לבחור לפתוח משפחה משלו במקום. */
+  let createFailed=null;
+  if(!HH&&!inviteFailed){
+    try{
+      const nm=nameHint||displayNameGuess();
+      await createHousehold('המשפחה של '+nm,nm);
+      await loadHousehold();
+    }catch(e){createFailed=e.message||'נסו שוב בעוד רגע'}
+  }
   nativeSignedIn();
 
-  /* בלי משפחה אין מה להציג. לא פותחים כאן משפחה חדשה "ליתר ביטחון" —
-     ככה נוצרות משפחות ריקות יתומות. */
   if(!HH){
-    document.getElementById('authIn').innerHTML=`
+    document.getElementById('authIn').innerHTML=inviteFailed?`
       <div class="authbox">
         <div class="authlogo">🔗</div>
         <h1>ההזמנה כבר לא תקפה</h1>
-        <p class="sub">${esc(inviteFailed||'החשבון הזה עדיין לא משויך לאף משפחה.')}
+        <p class="sub">${esc(inviteFailed)}
           <br><br>קישור הזמנה תקף 14 יום ומתבטל אחרי שימוש אחד.
-          בקשו מבן משפחה לשלוח לכם קישור חדש מההגדרות.</p>
-        <button class="btn" id="aBack" style="width:100%;margin-top:14px">חזרה למסך הכניסה</button>
+          בקשו מבן משפחה לשלוח לכם קישור חדש מההגדרות — או פתחו משפחה משלכם.</p>
+        <button class="btn" id="aNewHH" style="width:100%;margin-top:14px">פתיחת משפחה חדשה משלי</button>
+        <button class="btn ghost" id="aBack" style="width:100%;margin-top:8px">חזרה למסך הכניסה</button>
+      </div>`:`
+      <div class="authbox">
+        <div class="authlogo">⚠️</div>
+        <h1>לא הצלחנו לפתוח את המשפחה</h1>
+        <p class="sub">${esc(createFailed||'')}</p>
+        <button class="btn" id="aNewHH" style="width:100%;margin-top:14px">לנסות שוב</button>
+        <button class="btn ghost" id="aBack" style="width:100%;margin-top:8px">חזרה למסך הכניסה</button>
       </div>`;
+    document.getElementById('aNewHH').onclick=async e=>{
+      e.target.disabled=true;e.target.textContent='רגע…';
+      try{const nm=nameHint||displayNameGuess();await createHousehold('המשפחה של '+nm,nm)}catch(_){}
+      await afterAuth(nameHint);
+    };
     document.getElementById('aBack').onclick=()=>signOut();
     document.getElementById('auth').classList.add('on');
     document.body.style.overflow='hidden';
@@ -5424,7 +5441,7 @@ function wireLanding(){
     const b=document.getElementById(id);if(b)b.onclick=go;
   });
   const su=document.getElementById('heroSignup');
-  if(su)su.onclick=()=>toast('ההרשמה פתוחה כרגע בהזמנה בלבד');
+  if(su)su.onclick=()=>{authMode='up';hideLanding();showAuth()};
 
   const th=document.getElementById('landTheme');
   if(th)th.onclick=()=>document.getElementById('themeBtn').click();
