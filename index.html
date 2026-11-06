@@ -1452,6 +1452,7 @@ function toast(msg,action){
    בבדיקות מוזרק לקוח מזויף ב-window.__FAKE_SUPA, וכל השאר זהה. */
 let sb=null, SESSION=null, HH=null;   /* HH = המשפחה הפעילה */
 let digestOn=false;                  /* הצטרפות אישית לסיכום השבועי */
+let pushTx=true, pushDaily=true;      /* התראות פוש באפליקציית הטלפון — החלטה אישית */
 
 /* ספריית Supabase יושבת אצלנו בשרת (supabase.js) ולא ב-CDN חיצוני:
    פחות תלות בצד שלישי, והדף לא פונה לאף מקור זר בזמן הטעינה. */
@@ -1685,7 +1686,7 @@ async function flush(){
 async function loadHousehold(){
   const me=SESSION&&SESSION.user&&SESSION.user.id;
   const {data:mine,error:e1}=await sb.from('household_members')
-    .select('household_id,display_name,role,slot,joined_at,weekly_digest,'
+    .select('household_id,display_name,role,slot,joined_at,weekly_digest,push_tx,push_daily,'
            +'households(id,name,onboarded,auto_fixed,ai_consent,ai_assets_consent,'
            +'opening_balance,opening_date,alert_deficit,alert_forecast)')
     .eq('user_id',me);
@@ -1711,6 +1712,7 @@ async function loadHousehold(){
       alertDeficit:h.alert_deficit!==false, alertForecast:h.alert_forecast!==false,
       role:pick.role,others:mine.length-1};
   digestOn=!!pick.weekly_digest;
+  pushTx=pick.push_tx!==false; pushDaily=pick.push_daily!==false;
   return HH;
 }
 
@@ -1973,6 +1975,7 @@ async function afterAuth(nameHint){
     history.replaceState(null,'',location.pathname);
   }
   await loadHousehold();
+  nativeSignedIn();
 
   /* בלי משפחה אין מה להציג. לא פותחים כאן משפחה חדשה "ליתר ביטחון" —
      ככה נוצרות משפחות ריקות יתומות. */
@@ -2020,6 +2023,9 @@ function displayNameGuess(){
 }
 
 async function signOut(){
+  /* הטלפון הזה לא אמור להמשיך לקבל התראות על המשפחה אחרי התנתקות */
+  if(PUSH_TOKEN&&SESSION)try{await sb.rpc('unregister_push_token',{p_token:PUSH_TOKEN})}catch(e){}
+  PUSH_SAVED_FOR=null;
   try{await sb.auth.signOut()}catch(e){}
   SESSION=null;HH=null;S=emptyState();DIRTY.clear();GONE.length=0;
   render();
@@ -4686,14 +4692,50 @@ function disclosureCard(){
   </div>`;
 }
 
+/* ==================== אפליקציית הטלפון: התראות פוש ====================
+   האפליקציה (iOS/Android) מבקשת אישור להתראות ומעבירה לכאן את האסימון של
+   הטלפון. כאן שומרים אותו על המשתמש המחובר, כדי שהשרת ידע לאן לשלוח:
+   תנועה חדשה של בן משפחה, וסיכום של אתמול בכל בוקר. */
+let PUSH_TOKEN=null, PUSH_PLATFORM=null, PUSH_SAVED_FOR=null;
+window.__fpPushToken=function(token,platform){
+  PUSH_TOKEN=token;PUSH_PLATFORM=platform||null;
+  savePushToken();
+};
+async function savePushToken(){
+  if(!PUSH_TOKEN||!sb||!SESSION||!SESSION.user)return;
+  const key=SESSION.user.id+'|'+PUSH_TOKEN;
+  if(PUSH_SAVED_FOR===key)return;
+  const {error}=await sb.rpc('register_push_token',{p_token:PUSH_TOKEN,p_platform:PUSH_PLATFORM});
+  if(!error)PUSH_SAVED_FOR=key;
+}
+/* מודיע לאפליקציה שיש משתמש מחובר — רק אז היא מבקשת אישור להתראות */
+function nativeSignedIn(){
+  if(window.ReactNativeWebView&&SESSION&&SESSION.user){
+    window.ReactNativeWebView.postMessage(JSON.stringify({type:'signedIn'}));
+    savePushToken();
+  }
+}
+
 /* ==================== הגדרות ==================== */
 function installCard(){
   /* בתוך אפליקציית האייפון/אנדרואיד: אין מה להתקין, יש הגדרות של האפליקציה עצמה
      (נעילה ב-Face ID ותזכורת יומית). הכפתור מבקש מהאפליקציה לפתוח אותן. */
   if(window.ReactNativeWebView)return `
   <div class="card">
+    <h2>🔔 התראות בטלפון</h2>
+    <p class="sub">ההחלטה אישית — היא לא משפיעה על שאר בני המשפחה.</p>
+    <label class="swrow">
+      <input type="checkbox" id="pushTxOn" ${pushTx?'checked':''}>
+      <span><b>הוצאה או הכנסה חדשה</b><br>
+        <span class="sub">כשבן משפחה אחר רושם תנועה. על מה שרשמתם בעצמכם לא תקבלו התראה.</span></span></label>
+    <label class="swrow">
+      <input type="checkbox" id="pushDailyOn" ${pushDaily?'checked':''}>
+      <span><b>סיכום של אתמול, כל בוקר</b><br>
+        <span class="sub">כמה הוצאתם ונכנס אתמול, ואיפה עומדים מתחילת החודש.</span></span></label>
+  </div>
+  <div class="card">
     <h2>📱 הגדרות האפליקציה</h2>
-    <p class="sub">נעילה בזיהוי פנים או טביעת אצבע, ותזכורת יומית לרשום הוצאות.</p>
+    <p class="sub">נעילה בזיהוי פנים או טביעת אצבע, ותזכורת ערב לרשום הוצאות.</p>
     <button class="btn" id="nativeSettingsBtn">פתיחת הגדרות האפליקציה</button>
   </div>`;
   if(STANDALONE)return `
@@ -4951,6 +4993,21 @@ function wireSettings(){
     toast(error?('שגיאה: '+error.message):'שלחנו לכם קישור לשינוי סיסמה ✓');
   };
 
+  [['pushTxOn','push_tx',v=>pushTx=v,'התראות על תנועות חדשות'],
+   ['pushDailyOn','push_daily',v=>pushDaily=v,'הסיכום היומי']].forEach(([id,col,set,label])=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.onchange=async()=>{
+      const want=el.checked;
+      el.disabled=true;
+      const {error}=await sb.from('household_members').update({[col]:want})
+        .eq('household_id',HH.id).eq('user_id',SESSION.user.id);
+      el.disabled=false;
+      if(error){el.checked=!want;toast('העדכון נכשל: '+error.message);return}
+      set(want);
+      toast(want?label+' — פעיל ✓':label+' — כבוי');
+    };
+  });
   const nsb=document.getElementById('nativeSettingsBtn');
   if(nsb)nsb.onclick=()=>window.ReactNativeWebView.postMessage(JSON.stringify({type:'openSettings'}));
 
