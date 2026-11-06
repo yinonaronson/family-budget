@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
@@ -41,4 +42,25 @@ export async function scheduleDailyReminder(time: string): Promise<void> {
 
 export async function cancelDailyReminder(): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(DAILY_ID).catch(() => undefined);
+}
+
+/**
+ * The phone's address for family pushes (new transactions, yesterday's summary).
+ * Asks for permission the first time; null when the user said no or the phone can't get one.
+ */
+export async function getPushToken(): Promise<string | null> {
+  try {
+    if (!(await ensurePermission())) return null;
+    const projectId = (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId;
+    if (!projectId) return null;
+    const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/** JS handed to the web app with the token (JSON-quoted, so it can't break out of the string). */
+export function pushTokenScript(token: string, platform: string): string {
+  return `window.__fpPushToken && window.__fpPushToken(${JSON.stringify(token)}, ${JSON.stringify(platform)}); true;`;
 }

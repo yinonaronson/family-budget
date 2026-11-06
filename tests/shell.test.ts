@@ -1,7 +1,7 @@
 import { opensOutside, parseWebMessage, safeFileName } from '../src/links';
 import { shouldRelock } from '../src/lock';
 import { DEFAULT_PREFS, normalizePrefs, shouldOfferSetup } from '../src/prefs';
-import { parseTime } from '../src/reminders';
+import { parseTime, pushTokenScript } from '../src/reminders';
 
 describe('links', () => {
   it('keeps the family pocket inside the app', () => {
@@ -36,6 +36,9 @@ describe('web messages', () => {
       mime: 'application/json',
       text: '{}',
     });
+  });
+  it('knows when someone signed in', () => {
+    expect(parseWebMessage('{"type":"signedIn"}')).toEqual({ type: 'signedIn' });
   });
   it('ignores anything else', () => {
     expect(parseWebMessage('not json')).toBeNull();
@@ -76,5 +79,14 @@ describe('prefs', () => {
   it('parses reminder times safely', () => {
     expect(parseTime('20:30')).toEqual({ hour: 20, minute: 30 });
     expect(parseTime('99:99')).toEqual({ hour: 23, minute: 59 });
+  });
+});
+
+describe('push token hand-off', () => {
+  it('quotes the token so it cannot break out of the script', () => {
+    expect(pushTokenScript('ExponentPushToken[abc]', 'ios')).toBe(
+      'window.__fpPushToken && window.__fpPushToken("ExponentPushToken[abc]", "ios"); true;',
+    );
+    expect(pushTokenScript('x"); alert(1); ("', 'ios')).toContain('"x\\"); alert(1); (\\""');
   });
 });

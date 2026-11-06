@@ -22,6 +22,7 @@ export function opensOutside(url: string, isTopFrame = true): boolean {
 /** Messages the web app sends to the shell (window.ReactNativeWebView.postMessage). */
 export type WebMessage =
   | { type: 'openSettings' }
+  | { type: 'signedIn' }
   | { type: 'share'; title?: string; text?: string; url?: string }
   | { type: 'file'; name: string; mime?: string; text: string };
 
@@ -39,6 +40,8 @@ export function parseWebMessage(raw: string): WebMessage | null {
   switch (o.type) {
     case 'openSettings':
       return { type: 'openSettings' };
+    case 'signedIn':
+      return { type: 'signedIn' };
     case 'share':
       return { type: 'share', title: str(o.title), text: str(o.text), url: str(o.url) };
     case 'file': {

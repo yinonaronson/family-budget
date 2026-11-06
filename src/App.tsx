@@ -4,7 +4,7 @@ import * as Sharing from 'expo-sharing';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { type ComponentType, type Ref, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewProps } from 'react-native-webview';
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
@@ -13,7 +13,7 @@ import { COLORS, LOCK_AFTER_MS, SITE_URL } from './config';
 import { INJECTED_BEFORE_LOAD, opensOutside, parseWebMessage } from './links';
 import { biometricsAvailable, shouldRelock, unlock } from './lock';
 import { DEFAULT_PREFS, loadPrefs, savePrefs, shouldOfferSetup, type Prefs } from './prefs';
-import { cancelDailyReminder, configureNotifications, ensurePermission, scheduleDailyReminder } from './reminders';
+import { cancelDailyReminder, configureNotifications, ensurePermission, getPushToken, pushTokenScript, scheduleDailyReminder } from './reminders';
 import { SettingsSheet } from './SettingsSheet';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -131,7 +131,11 @@ function Shell() {
   const onMessage = async (e: WebViewMessageEvent) => {
     const m = parseWebMessage(e.nativeEvent.data);
     if (!m) return;
-    if (m.type === 'openSettings') {
+    if (m.type === 'signedIn') {
+      // someone is signed in: now asking for notifications makes sense (family updates + daily summary)
+      const token = await getPushToken();
+      if (token) web.current?.injectJavaScript(pushTokenScript(token, Platform.OS));
+    } else if (m.type === 'openSettings') {
       setIntro(false);
       setMessage(null);
       setSettingsOpen(true);
