@@ -31,21 +31,35 @@
     },
     "extra": {
       "supportsRTL": true,
-      "forcesRTL": true
+      "forcesRTL": true,
+      "eas": {
+        "projectId": "ff8a1342-2ce9-4428-beea-e191018cdb6d"
+      }
     },
     "plugins": [
       "expo-secure-store",
       "expo-localization",
       [
         "expo-local-authentication",
-        { "faceIDPermission": "זיהוי הפנים משמש לנעילת האפליקציה, כדי שהנתונים הכספיים של המשפחה יישארו רק שלכם." }
+        {
+          "faceIDPermission": "זיהוי הפנים משמש לנעילת האפליקציה, כדי שהנתונים הכספיים של המשפחה יישארו רק שלכם."
+        }
       ],
       [
         "expo-splash-screen",
-        { "image": "./assets/splash-icon.png", "imageWidth": 140, "backgroundColor": "#f4f4f1" }
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 140,
+          "backgroundColor": "#f4f4f1"
+        }
       ],
       "expo-sharing",
-      ["expo-notifications", { "color": "#2A78D6" }]
+      [
+        "expo-notifications",
+        {
+          "color": "#2A78D6"
+        }
+      ]
     ],
     "owner": "yinon22s-team"
   }
