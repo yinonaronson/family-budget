@@ -1,7 +1,23 @@
 {
-  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
-    "production": { "autoIncrement": true, "environment": "production" }
+    "production": {
+      "autoIncrement": true,
+      "environment": "production",
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      }
+    }
   },
   "submit": {
     "production": {
@@ -11,6 +27,11 @@
         "ascApiKeyPath": "./asc-key.p8",
         "ascApiKeyIssuerId": "64236e9c-ffb7-43de-9c13-799cea194767",
         "ascApiKeyId": "NC6Z34ZZXM"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
       }
     }
   }

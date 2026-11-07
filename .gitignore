@@ -6,3 +6,4 @@ android/
 *.p8
 asc-key.p8
 submit-log.txt
+play-service-account.json

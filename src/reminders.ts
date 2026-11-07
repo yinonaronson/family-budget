@@ -13,6 +13,12 @@ export function configureNotifications(): void {
   });
   if (Platform.OS === 'android') {
     void Notifications.setNotificationChannelAsync('reminders', { name: 'תזכורות', importance: Notifications.AndroidImportance.DEFAULT });
+    // family pushes arrive without a channelId, and Expo delivers those on the 'default' channel
+    void Notifications.setNotificationChannelAsync('default', {
+      name: 'עדכוני המשפחה',
+      description: 'הכנסה או הוצאה חדשה של בן משפחה, וסיכום של אתמול',
+      importance: Notifications.AndroidImportance.HIGH,
+    });
   }
 }
 

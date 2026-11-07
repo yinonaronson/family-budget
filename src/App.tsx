@@ -4,11 +4,12 @@ import * as Sharing from 'expo-sharing';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { type ComponentType, type Ref, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, BackHandler, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewProps } from 'react-native-webview';
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
 
+import { backAction } from './back';
 import { COLORS, LOCK_AFTER_MS, SITE_URL } from './config';
 import { INJECTED_BEFORE_LOAD, opensOutside, parseWebMessage } from './links';
 import { biometricsAvailable, shouldRelock, unlock } from './lock';
@@ -40,6 +41,7 @@ function Shell() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const backgroundedAt = useRef<number | null>(null);
+  const canGoBack = useRef(false);
 
   // first load: prefs, biometrics, launch count, lock if needed
   useEffect(() => {
@@ -70,6 +72,17 @@ function Shell() {
     });
     return () => sub.remove();
   }, [prefs?.lockEnabled, biometrics]);
+
+  // Android Back: step back inside the site instead of closing the app
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (backAction({ locked, canGoBack: canGoBack.current }) !== 'webBack') return false;
+      web.current?.goBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [locked]);
 
   const tryUnlock = useCallback(async () => {
     if (await unlock()) setLocked(false);
@@ -189,6 +202,9 @@ function Shell() {
           injectedJavaScriptBeforeContentLoaded={INJECTED_BEFORE_LOAD}
           onMessage={onMessage}
           onShouldStartLoadWithRequest={onShouldStart}
+          onNavigationStateChange={(nav) => {
+            canGoBack.current = nav.canGoBack;
+          }}
           onLoadEnd={() => void SplashScreen.hideAsync().catch(() => undefined)}
           onError={() => {
             setOffline(true);
