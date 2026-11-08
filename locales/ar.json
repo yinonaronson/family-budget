@@ -1,0 +1,5 @@
+{
+  "CFBundleDisplayName": "الجيب العائلي",
+  "NSFaceIDUsageDescription": "تُستخدم بصمة الوجه لقفل التطبيق، كي تبقى البيانات المالية لعائلتكم لكم وحدكم.",
+  "NSUserNotificationsUsageDescription": "تُستخدم الإشعارات لتحديثات العائلة وتذكير يومي بتسجيل المصاريف."
+}

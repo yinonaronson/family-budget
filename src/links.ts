@@ -1,4 +1,5 @@
 import { INTERNAL_HOSTS } from './config';
+import { asLang, type Lang } from './strings';
 
 /**
  * Pure: should a navigation leave the app?
@@ -23,6 +24,7 @@ export function opensOutside(url: string, isTopFrame = true): boolean {
 export type WebMessage =
   | { type: 'openSettings' }
   | { type: 'signedIn' }
+  | { type: 'lang'; lang: Lang }
   | { type: 'share'; title?: string; text?: string; url?: string }
   | { type: 'file'; name: string; mime?: string; text: string };
 
@@ -42,6 +44,8 @@ export function parseWebMessage(raw: string): WebMessage | null {
       return { type: 'openSettings' };
     case 'signedIn':
       return { type: 'signedIn' };
+    case 'lang':
+      return { type: 'lang', lang: asLang(o.lang) };
     case 'share':
       return { type: 'share', title: str(o.title), text: str(o.text), url: str(o.url) };
     case 'file': {

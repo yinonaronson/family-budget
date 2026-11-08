@@ -1,5 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
+import type { Lang } from './strings';
+
 export type Prefs = {
   lockEnabled: boolean;
   reminderEnabled: boolean;
@@ -7,9 +9,11 @@ export type Prefs = {
   /** the one-time "want a reminder / lock?" sheet was already shown */
   askedOnce: boolean;
   launches: number;
+  /** the language the web app last showed; null until it says */
+  lang: Lang | null;
 };
 
-export const DEFAULT_PREFS: Prefs = { lockEnabled: false, reminderEnabled: false, reminderTime: '21:00', askedOnce: false, launches: 0 };
+export const DEFAULT_PREFS: Prefs = { lockEnabled: false, reminderEnabled: false, reminderTime: '21:00', askedOnce: false, launches: 0, lang: null };
 
 const KEY = 'family-pocket-prefs-v1';
 
@@ -23,6 +27,7 @@ export function normalizePrefs(raw: unknown): Prefs {
     reminderTime: time,
     askedOnce: o.askedOnce === true,
     launches: typeof o.launches === 'number' && o.launches >= 0 ? Math.floor(o.launches) : 0,
+    lang: o.lang === 'he' || o.lang === 'en' || o.lang === 'ar' ? o.lang : null,
   };
 }
 

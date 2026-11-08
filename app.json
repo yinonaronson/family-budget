@@ -13,7 +13,12 @@
       "infoPlist": {
         "CFBundleDevelopmentRegion": "he",
         "ITSAppUsesNonExemptEncryption": false,
-        "NSFaceIDUsageDescription": "Face ID locks the app so your family's financial data stays private."
+        "NSFaceIDUsageDescription": "Face ID locks the app so your family's financial data stays private.",
+        "CFBundleLocalizations": [
+          "he",
+          "en",
+          "ar"
+        ]
       }
     },
     "android": {
@@ -27,7 +32,9 @@
       "predictiveBackGestureEnabled": false
     },
     "locales": {
-      "he": "./locales/he.json"
+      "he": "./locales/he.json",
+      "en": "./locales/en.json",
+      "ar": "./locales/ar.json"
     },
     "extra": {
       "supportsRTL": true,

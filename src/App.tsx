@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { getLocales } from 'expo-localization';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as SplashScreen from 'expo-splash-screen';
@@ -16,6 +17,16 @@ import { biometricsAvailable, shouldRelock, unlock } from './lock';
 import { DEFAULT_PREFS, loadPrefs, savePrefs, shouldOfferSetup, type Prefs } from './prefs';
 import { cancelDailyReminder, configureNotifications, ensurePermission, getPushToken, pushTokenScript, scheduleDailyReminder } from './reminders';
 import { SettingsSheet } from './SettingsSheet';
+import { asLang, REPORT_LANG_SCRIPT, STRINGS, type Lang } from './strings';
+
+/** Until the web app says which language it shows, the phone's language decides. */
+const deviceLang = (): Lang => {
+  try {
+    return asLang(getLocales()[0]?.languageCode);
+  } catch {
+    return 'he';
+  }
+};
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -42,10 +53,16 @@ function Shell() {
   const [message, setMessage] = useState<string | null>(null);
   const backgroundedAt = useRef<number | null>(null);
   const canGoBack = useRef(false);
+  const lang: Lang = prefs?.lang ?? deviceLang();
+  const s = STRINGS[lang];
+
+  // notification channels (Android) carry names in the current language
+  useEffect(() => {
+    configureNotifications(s);
+  }, [s]);
 
   // first load: prefs, biometrics, launch count, lock if needed
   useEffect(() => {
-    configureNotifications();
     void (async () => {
       const [p, bio] = await Promise.all([loadPrefs(), biometricsAvailable()]);
       const next = { ...p, launches: p.launches + 1 };
@@ -85,8 +102,8 @@ function Shell() {
   }, [locked]);
 
   const tryUnlock = useCallback(async () => {
-    if (await unlock()) setLocked(false);
-  }, []);
+    if (await unlock(s)) setLocked(false);
+  }, [s]);
 
   useEffect(() => {
     if (locked) void tryUnlock();
@@ -103,7 +120,7 @@ function Shell() {
     setMessage(null);
     if (on) {
       setBusy(true);
-      const ok = await unlock(); // prove it works before turning it on
+      const ok = await unlock(s); // prove it works before turning it on
       setBusy(false);
       if (!ok) return;
     }
@@ -117,10 +134,10 @@ function Shell() {
     try {
       if (on) {
         if (!(await ensurePermission())) {
-          setMessage('ההתראות חסומות לאפליקציה. אפשר לאשר אותן בהגדרות הטלפון ← הכיס המשפחתי ← עדכונים.');
+          setMessage(s.notificationsBlocked);
           return;
         }
-        await scheduleDailyReminder(prefs?.reminderTime ?? DEFAULT_PREFS.reminderTime);
+        await scheduleDailyReminder(prefs?.reminderTime ?? DEFAULT_PREFS.reminderTime, s);
       } else {
         await cancelDailyReminder();
       }
@@ -134,7 +151,7 @@ function Shell() {
   const onPickTime = async (time: string) => {
     setBusy(true);
     try {
-      await scheduleDailyReminder(time);
+      await scheduleDailyReminder(time, s);
       await update({ reminderTime: time });
     } finally {
       setBusy(false);
@@ -144,7 +161,12 @@ function Shell() {
   const onMessage = async (e: WebViewMessageEvent) => {
     const m = parseWebMessage(e.nativeEvent.data);
     if (!m) return;
-    if (m.type === 'signedIn') {
+    if (m.type === 'lang') {
+      if (!prefs || m.lang === prefs.lang) return;
+      await update({ lang: m.lang });
+      // the evening reminder was written in the old language
+      if (prefs.reminderEnabled) await scheduleDailyReminder(prefs.reminderTime, STRINGS[m.lang]).catch(() => undefined);
+    } else if (m.type === 'signedIn') {
       // someone is signed in: now asking for notifications makes sense (family updates + daily summary)
       const token = await getPushToken();
       if (token) web.current?.injectJavaScript(pushTokenScript(token, Platform.OS));
@@ -180,8 +202,8 @@ function Shell() {
       <StatusBar style="dark" />
       {offline ? (
         <View style={styles.center}>
-          <Text style={styles.offlineTitle}>אין חיבור לאינטרנט</Text>
-          <Text style={styles.offlineText}>הכיס המשפחתי צריך רשת כדי לשמור ולסנכרן את הנתונים של כל המשפחה.</Text>
+          <Text style={styles.offlineTitle}>{s.offlineTitle}</Text>
+          <Text style={styles.offlineText}>{s.offlineText}</Text>
           <Pressable
             style={styles.button}
             accessibilityRole="button"
@@ -190,7 +212,7 @@ function Shell() {
               web.current?.reload();
             }}
           >
-            <Text style={styles.buttonText}>לנסות שוב</Text>
+            <Text style={styles.buttonText}>{s.retry}</Text>
           </Pressable>
         </View>
       ) : (
@@ -200,6 +222,7 @@ function Shell() {
           style={styles.web}
           originWhitelist={['*']}
           injectedJavaScriptBeforeContentLoaded={INJECTED_BEFORE_LOAD}
+          injectedJavaScript={REPORT_LANG_SCRIPT}
           onMessage={onMessage}
           onShouldStartLoadWithRequest={onShouldStart}
           onNavigationStateChange={(nav) => {
@@ -233,9 +256,9 @@ function Shell() {
 
       {locked ? (
         <View style={[StyleSheet.absoluteFill, styles.lock]}>
-          <Text style={styles.lockTitle}>הכיס המשפחתי נעול</Text>
+          <Text style={styles.lockTitle}>{s.lockedTitle}</Text>
           <Pressable style={styles.button} accessibilityRole="button" onPress={() => void tryUnlock()}>
-            <Text style={styles.buttonText}>פתיחה</Text>
+            <Text style={styles.buttonText}>{s.unlockButton}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -248,6 +271,7 @@ function Shell() {
           busy={busy}
           message={message}
           intro={intro}
+          lang={lang}
           onClose={() => setSettingsOpen(false)}
           onToggleLock={(v) => void onToggleLock(v)}
           onToggleReminder={(v) => void onToggleReminder(v)}

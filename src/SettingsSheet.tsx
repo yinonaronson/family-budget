@@ -1,8 +1,9 @@
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { I18nManager, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS, REMINDER_TIMES } from './config';
 import type { Prefs } from './prefs';
+import { layoutFor, STRINGS, type Lang } from './strings';
 
 type Props = {
   visible: boolean;
@@ -11,6 +12,7 @@ type Props = {
   busy: boolean;
   message: string | null;
   intro: boolean;
+  lang: Lang;
   onClose: () => void;
   onToggleLock: (on: boolean) => void;
   onToggleReminder: (on: boolean) => void;
@@ -19,34 +21,36 @@ type Props = {
 
 export function SettingsSheet(p: Props) {
   const insets = useSafeAreaInsets();
+  const s = STRINGS[p.lang];
+  const L = layoutFor(p.lang, I18nManager.isRTL);
+  const txt = { textAlign: L.textAlign, writingDirection: L.writingDirection };
+  const row = { flexDirection: L.rowDirection };
   return (
     <Modal visible={p.visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={p.onClose}>
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-        <View style={styles.header}>
-          <Text style={styles.title} accessibilityRole="header">
-            {p.intro ? 'שני דברים קטנים שעוזרים' : 'הגדרות האפליקציה'}
+        <View style={[styles.header, row]}>
+          <Text style={[styles.title, txt]} accessibilityRole="header">
+            {p.intro ? s.introTitle : s.settingsTitle}
           </Text>
           <Pressable onPress={p.onClose} accessibilityRole="button" hitSlop={12}>
-            <Text style={styles.close}>{p.intro ? 'אולי אחר כך' : 'סגירה'}</Text>
+            <Text style={styles.close}>{p.intro ? s.maybeLater : s.close}</Text>
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={{ gap: 16 }}>
-          {p.message ? <Text style={styles.message}>{p.message}</Text> : null}
+          {p.message ? <Text style={[styles.message, txt]}>{p.message}</Text> : null}
 
           <View style={styles.card}>
-            <Row label="נעילה בזיהוי פנים / טביעת אצבע" value={p.prefs.lockEnabled} disabled={p.busy || !p.biometrics} onChange={p.onToggleLock} />
-            <Text style={styles.sub}>
-              {p.biometrics
-                ? 'כשהאפליקציה נפתחת, או חוזרת אחרי דקה ברקע, היא מבקשת לזהות אתכם. הנתונים הכספיים נשארים רק שלכם.'
-                : 'בטלפון הזה לא מוגדר זיהוי פנים או טביעת אצבע. אפשר להגדיר אותו בהגדרות הטלפון.'}
+            <Row row={row} txt={txt} label={s.lockLabel} value={p.prefs.lockEnabled} disabled={p.busy || !p.biometrics} onChange={p.onToggleLock} />
+            <Text style={[styles.sub, txt]}>
+              {p.biometrics ? s.lockSub : s.lockUnavailable}
             </Text>
           </View>
 
           <View style={styles.card}>
-            <Row label="תזכורת יומית לרשום הוצאות" value={p.prefs.reminderEnabled} disabled={p.busy} onChange={p.onToggleReminder} />
-            <Text style={styles.sub}>תזכורת אחת בערב. מי שרושם כל יום יודע בכל רגע כמה נשאר עד סוף החודש.</Text>
+            <Row row={row} txt={txt} label={s.reminderLabel} value={p.prefs.reminderEnabled} disabled={p.busy} onChange={p.onToggleReminder} />
+            <Text style={[styles.sub, txt]}>{s.reminderSub}</Text>
             {p.prefs.reminderEnabled ? (
-              <View style={styles.chips}>
+              <View style={[styles.chips, row]}>
                 {REMINDER_TIMES.map((t) => {
                   const selected = p.prefs.reminderTime === t;
                   return (
@@ -71,10 +75,13 @@ export function SettingsSheet(p: Props) {
   );
 }
 
-function Row({ label, value, disabled, onChange }: { label: string; value: boolean; disabled: boolean; onChange: (v: boolean) => void }) {
+type RowStyle = { flexDirection: 'row' | 'row-reverse' };
+type TxtStyle = { textAlign: 'left' | 'right'; writingDirection: 'ltr' | 'rtl' };
+
+function Row({ label, value, disabled, onChange, row, txt }: { label: string; value: boolean; disabled: boolean; onChange: (v: boolean) => void; row: RowStyle; txt: TxtStyle }) {
   return (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={[styles.row, row]}>
+      <Text style={[styles.label, txt]}>{label}</Text>
       <Switch value={value} disabled={disabled} onValueChange={onChange} trackColor={{ true: COLORS.primary }} accessibilityLabel={label} />
     </View>
   );

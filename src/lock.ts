@@ -1,5 +1,7 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 
+import type { Strings } from './strings';
+
 /** Pure: after this long in the background, the lock comes back. */
 export function shouldRelock(backgroundedAt: number | null, now: number, afterMs: number): boolean {
   return backgroundedAt !== null && now - backgroundedAt >= afterMs;
@@ -14,11 +16,11 @@ export async function biometricsAvailable(): Promise<boolean> {
   }
 }
 
-export async function unlock(): Promise<boolean> {
+export async function unlock(s: Strings): Promise<boolean> {
   const r = await LocalAuthentication.authenticateAsync({
-    promptMessage: 'פתיחת הכיס המשפחתי',
-    cancelLabel: 'ביטול',
-    fallbackLabel: 'שימוש בקוד',
+    promptMessage: s.unlockPrompt,
+    cancelLabel: s.cancel,
+    fallbackLabel: s.usePasscode,
   });
   return r.success;
 }

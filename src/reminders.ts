@@ -2,21 +2,25 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import type { Strings } from './strings';
+
 const DAILY_ID = 'daily-expenses';
 
 let configured = false;
-export function configureNotifications(): void {
-  if (configured) return;
-  configured = true;
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }),
-  });
+/** Safe to call again when the language changes: Android just renames the channels. */
+export function configureNotifications(s: Strings): void {
+  if (!configured) {
+    configured = true;
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }),
+    });
+  }
   if (Platform.OS === 'android') {
-    void Notifications.setNotificationChannelAsync('reminders', { name: 'תזכורות', importance: Notifications.AndroidImportance.DEFAULT });
+    void Notifications.setNotificationChannelAsync('reminders', { name: s.channelReminders, importance: Notifications.AndroidImportance.DEFAULT });
     // family pushes arrive without a channelId, and Expo delivers those on the 'default' channel
     void Notifications.setNotificationChannelAsync('default', {
-      name: 'עדכוני המשפחה',
-      description: 'הכנסה או הוצאה חדשה של בן משפחה, וסיכום של אתמול',
+      name: s.channelFamily,
+      description: s.channelFamilyDesc,
       importance: Notifications.AndroidImportance.HIGH,
     });
   }
@@ -36,12 +40,12 @@ export function parseTime(time: string): { hour: number; minute: number } {
   return { hour: Math.min(23, Math.max(0, Number(h) || 0)), minute: Math.min(59, Math.max(0, Number(m) || 0)) };
 }
 
-export async function scheduleDailyReminder(time: string): Promise<void> {
+export async function scheduleDailyReminder(time: string, s: Strings): Promise<void> {
   await cancelDailyReminder();
   const { hour, minute } = parseTime(time);
   await Notifications.scheduleNotificationAsync({
     identifier: DAILY_ID,
-    content: { title: 'רשמתם את ההוצאות של היום?', body: 'דקה אחת עכשיו חוסכת הפתעות בסוף החודש.' },
+    content: { title: s.reminderTitle, body: s.reminderBody },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: 'reminders' },
   });
 }
