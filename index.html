@@ -3026,7 +3026,7 @@ function viewBudget(){
       ${S.categories.map(c=>{const u=usage(c,month),sp=spent[c.id]||0,left=u.b-u.sp;return `
       <div class="brow">
         <div class="line1"><span class="ic">${c.icon}</span>
-          <input class="cName" data-id="${c.id}" value="${esc(c.name)}" style="max-width:165px;padding:5px 8px;font-size:13.5px;font-weight:600;background:transparent;border-color:transparent">
+          <input class="cName" dir="auto" data-id="${c.id}" value="${esc(c.name)}" style="max-width:165px;padding:5px 8px;font-size:13.5px;font-weight:600;background:transparent;border-color:transparent">
           <span class="amt" style="margin-inline-start:auto">${c.freq>1?`נוצל ב-${c.freq} חודשים ${money(u.sp)}`:`נוצל ${money(sp)}`} · ${left<0?`<span class="neg">חריגה ${money(-left)}</span>`:`נותר ${money(left)}`}</span>
         </div>
         <div style="display:flex;gap:8px;align-items:center">

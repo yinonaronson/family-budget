@@ -168,6 +168,8 @@ function __i18nInit(dict) {
       if (a && HEB.test(a)) { var r = tr(a); if (r !== a) el.setAttribute(ATTRS[i], r); }
     }
     if (el.tagName === 'INPUT' && (el.type === 'button' || el.type === 'submit') && HEB.test(el.value)) el.value = tr(el.value);
+    // שם בעברית שהמשפחה הקלידה (קטגוריה, נכס) נשאר כמו שהוא — רק בכיוון הנכון
+    else if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && HEB.test(el.value)) { el.setAttribute('dir', 'auto'); el.style.textAlign = document.documentElement.dir === 'ltr' ? 'left' : 'right'; }
   }
   function walk(root) {
     if (root.nodeType === 3) { doText(root); return; }
