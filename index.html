@@ -1707,7 +1707,7 @@ async function flush(){
 async function loadHousehold(){
   const me=SESSION&&SESSION.user&&SESSION.user.id;
   const {data:mine,error:e1}=await sb.from('household_members')
-    .select('household_id,display_name,role,slot,joined_at,weekly_digest,push_tx,push_daily,'
+    .select('household_id,display_name,role,slot,joined_at,weekly_digest,push_tx,push_daily,lang,'
            +'households(id,name,onboarded,auto_fixed,ai_consent,ai_assets_consent,'
            +'opening_balance,opening_date,alert_deficit,alert_forecast)')
     .eq('user_id',me);
@@ -1734,6 +1734,10 @@ async function loadHousehold(){
       role:pick.role,others:mine.length-1};
   digestOn=!!pick.weekly_digest;
   pushTx=pick.push_tx!==false; pushDaily=pick.push_daily!==false;
+  /* השפה של המכשיר הזה — כדי שההתראות יגיעו בה. כל המשפחות של המשתמש, בלי לחכות. */
+  const myLang=document.documentElement.lang||'he';
+  if(mine.some(r=>(r.lang||'he')!==myLang))
+    Promise.resolve(sb.from('household_members').update({lang:myLang}).eq('user_id',me)).catch(()=>{});
   return HH;
 }
 
@@ -1828,12 +1832,14 @@ const DEFAULT_TRANSFER=[['🐷','חיסכון'],['📈','מניות והשקעו
 /* פתיחת משפחה חדשה למשתמש שאין לו אף משפחה. הכול קורה בפונקציה אחת
    בשרת: משפחה, החבר הראשון (בעלים) וקטגוריות ברירת המחדל — או כלום.
    אם כבר יש לו משפחה (שני מכשירים באותו רגע) השרת מחזיר את הקיימת. */
+/* בשפה שהמשתמש בחר (בעברית __t מחזירה את אותה מחרוזת) */
+const T=s=>(window.__t?window.__t(s):s);
 async function createHousehold(name,displayName){
-  const cats=DEFAULT_CATS.map(([icon,n,b,slot,freq])=>({kind:'expense',icon,name:n,budget:b,slot,freq}))
-    .concat(DEFAULT_INCOME.map(([icon,n],i)=>({kind:'income',icon,name:n,budget:0,slot:i+1,freq:1})))
-    .concat(DEFAULT_TRANSFER.map(([icon,n],i)=>({kind:'transfer',icon,name:n,budget:0,slot:i+1,freq:1})));
+  const cats=DEFAULT_CATS.map(([icon,n,b,slot,freq])=>({kind:'expense',icon,name:T(n),budget:b,slot,freq}))
+    .concat(DEFAULT_INCOME.map(([icon,n],i)=>({kind:'income',icon,name:T(n),budget:0,slot:i+1,freq:1})))
+    .concat(DEFAULT_TRANSFER.map(([icon,n],i)=>({kind:'transfer',icon,name:T(n),budget:0,slot:i+1,freq:1})));
   const {data,error}=await sb.rpc('create_my_household',
-    {p_name:name||'המשפחה שלי',p_display_name:displayName||'אני',p_categories:cats});
+    {p_name:name||T('המשפחה שלי'),p_display_name:displayName||T('אני'),p_categories:cats});
   if(error)throw error;
   return data;
 }
@@ -1846,7 +1852,7 @@ async function createInvite(){
   return location.origin+location.pathname+'#join='+token;
 }
 async function redeemInvite(token,displayName){
-  const {data,error}=await sb.rpc('redeem_invite',{p_token:token,p_display_name:displayName||'בן משפחה'});
+  const {data,error}=await sb.rpc('redeem_invite',{p_token:token,p_display_name:displayName||T('בן משפחה')});
   if(error)throw error;
   return data;
 }
@@ -5557,7 +5563,7 @@ function drawWiz(){
     const fx=Object.values(wz.fixed).reduce((a,b)=>a+b,0), left=inc-fx;
     el.innerHTML=`${bars(3)}<div class="body"><h1>כמה להקצות לשוטף? 🎯</h1>
       <p class="lead">${inc?`אחרי ההוצאות הקבועות (${money(fx)}) נשארו לכם <b>${money(left)}</b> בחודש. חלקו אותם:`:'קבעו תקרה חודשית לקטגוריות המשתנות:'}</p>
-      ${BUDGET_SUGGEST.map(n=>{const c=S.categories.find(x=>x.name===n);return `<div class="checkline">
+      ${BUDGET_SUGGEST.map(n=>{const c=S.categories.find(x=>x.name===n||x.name===T(n));return `<div class="checkline">
         <span class="nm"><span>${c?c.icon:'📌'}</span>${esc(n)}</span>
         <input type="number" class="wbAmt" data-n="${esc(n)}" inputmode="decimal" value="${wz.budgets[n]||''}"></div>`}).join('')}
       <p class="sub" id="wLeft" style="margin-top:14px"></p></div>${foot('סיום והתחלה ✓',true)}`;
@@ -5593,19 +5599,19 @@ function applyWizard(){
     const isMe=m&&n===(m.name||mine);
     S.tx.push(touch({id:uid(),type:'income',amount:v,date:month+'-01',
       catId:(S.incomeCats[0]||{}).id||null,
-      memberId:isMe?m.id:null, memberLabel:isMe?null:n, note:'משכורת'}));
+      memberId:isMe?m.id:null, memberLabel:isMe?null:n, note:T('משכורת')}));
   });
 
   Object.entries(wz.fixed).forEach(([n,v])=>{
     if(!(v>0))return;
-    const c=S.categories.find(x=>x.name===n);
-    if(!S.recurring.find(r=>r.name===n))
-      S.recurring.push(touch({id:uid(),name:n,amount:v,catId:c?c.id:(S.categories[0]||{}).id||null,
+    const c=S.categories.find(x=>x.name===n||x.name===T(n));
+    if(!S.recurring.find(r=>r.name===n||r.name===T(n)))
+      S.recurring.push(touch({id:uid(),name:T(n),amount:v,catId:c?c.id:(S.categories[0]||{}).id||null,
         memberId:m?m.id:null,day:1,active:true}));
     if(c){setBudgetAlways(c,v);c.freq=1}
   });
   Object.entries(wz.budgets).forEach(([n,v])=>{
-    const c=S.categories.find(x=>x.name===n);if(c&&v>0)setBudgetAlways(c,v)});
+    const c=S.categories.find(x=>x.name===n||x.name===T(n));if(c&&v>0)setBudgetAlways(c,v)});
 
   save(true);
   const n=S.recurring.filter(r=>r.active!==false).length;

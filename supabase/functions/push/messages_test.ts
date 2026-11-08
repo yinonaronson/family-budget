@@ -2,7 +2,7 @@ const assertEquals = (a: unknown, b: unknown) => {
   if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error('expected ' + JSON.stringify(b) + ' got ' + JSON.stringify(a));
 };
 
-import { dailyMessage, israelDates, txMessage, type Cat, type Tx } from './messages.ts';
+import { asLang, dailyMessage, israelDates, txMessage, type Cat, type Tx } from './messages.ts';
 
 const cats = new Map<string, Cat>([
   ['c1', { id: 'c1', name: 'סופר', icon: '🛒' }],
@@ -43,4 +43,23 @@ Deno.test('dates follow Israel time', () => {
   // 23:30 UTC on Nov 5 is already Nov 6 in Israel, so "yesterday" is Nov 5
   assertEquals(israelDates(new Date('2026-11-05T23:30:00Z')), { yesterday: '2026-11-05', monthStart: '2026-11-01' });
   assertEquals(israelDates(new Date('2026-12-01T06:00:00Z')), { yesterday: '2026-11-30', monthStart: '2026-11-01' });
+});
+
+Deno.test('english push translates default category names', () => {
+  const c = new Map<string, Cat>([['c1', { id: 'c1', name: 'סופר ומזון', icon: '🛒' }]]);
+  assertEquals(txMessage([tx({ amount: 50, category_id: 'c1' })], 'Dana', c, 'en'), {
+    title: '💸 New expense',
+    body: 'Dana: ₪50 · 🛒 Groceries & food',
+  });
+});
+
+Deno.test('arabic daily summary', () => {
+  const m = dailyMessage([tx({ amount: 200, category_id: 'c1' }), tx({ amount: 80, category_id: 'c2' })], cats, 4300, 'ar');
+  assertEquals(m.title, '☀️ ملخص الأمس');
+  assertEquals(m.body.startsWith('مصاريف ₪280 (2 حركات)'), true);
+});
+
+Deno.test('english quiet day and unknown language falls back to hebrew', () => {
+  assertEquals(dailyMessage([], cats, 0, 'en').title, "☀️ Yesterday's summary");
+  assertEquals(asLang('fr'), 'he');
 });

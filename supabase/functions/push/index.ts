@@ -13,7 +13,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-import { dailyMessage, israelDates, txMessage, type Cat, type Tx } from './messages.ts';
+import { asLang, dailyMessage, israelDates, txMessage, type Cat, type Tx } from './messages.ts';
 
 type Msg = { to: string; title: string; body: string; sound: 'default'; data: Record<string, string> };
 
@@ -62,7 +62,7 @@ async function onTransactions(rows: Tx[]) {
   const hids = [...new Set(rows.map((r) => r.household_id))];
   const { data: members, error } = await sb
     .from('household_members')
-    .select('household_id,user_id,display_name,push_tx')
+    .select('household_id,user_id,display_name,push_tx,lang')
     .in('household_id', hids);
   if (error) throw error;
   const cats = await categories(hids);
@@ -78,10 +78,10 @@ async function onTransactions(rows: Tx[]) {
   for (const [key, txs] of groups) {
     const [hid, author] = key.split('|') as [string, string];
     const authorName = members?.find((m) => m.household_id === hid && m.user_id === author)?.display_name ?? '';
-    const msg = txMessage(txs, authorName, cats);
-    if (!msg) continue;
     for (const m of recipients) {
       if (m.household_id !== hid || m.user_id === author) continue;
+      const msg = txMessage(txs, authorName, cats, asLang(m.lang));
+      if (!msg) continue;
       for (const to of tokens.get(m.user_id) ?? []) messages.push({ to, ...msg, sound: 'default', data: { kind: 'tx' } });
     }
   }
@@ -92,7 +92,7 @@ async function onDaily() {
   const { yesterday, monthStart } = israelDates(new Date());
   const { data: members, error } = await sb
     .from('household_members')
-    .select('household_id,user_id')
+    .select('household_id,user_id,lang')
     .eq('push_daily', true);
   if (error) throw error;
   const tokens = await tokensFor([...new Set((members ?? []).map((m) => m.user_id))]);
@@ -112,9 +112,9 @@ async function onDaily() {
     const mine = (txs ?? []).filter((t) => t.household_id === hid) as Tx[];
     const yest = mine.filter((t) => t.occurred_on === yesterday);
     const monthExp = mine.filter((t) => t.kind === 'expense').reduce((s, t) => s + +t.amount, 0);
-    const msg = dailyMessage(yest, cats, monthExp);
     for (const m of withPhones) {
       if (m.household_id !== hid) continue;
+      const msg = dailyMessage(yest, cats, monthExp, asLang(m.lang));
       for (const to of tokens.get(m.user_id) ?? []) messages.push({ to, ...msg, sound: 'default', data: { kind: 'daily' } });
     }
   }
