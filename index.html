@@ -3,6 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+/* בתוך אפליקציית הטלפון זה מסך של אפליקציה ולא אתר: בלי הגדלה בהקשה כפולה
+   או בצביטה. בלי זה הטלפון גם מחכה רגע אחרי כל הקשה לראות אם תבוא שנייה,
+   וזה מרגיש תקוע. באתר בדפדפן ההגדלה נשארת (נגישות). */
+if(window.__FAMILY_POCKET_APP__||window.ReactNativeWebView){
+  document.querySelector('meta[name=viewport]').setAttribute('content',
+    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+  document.documentElement.classList.add('in-app');
+}
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,6 +24,9 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>הכיס המשפחתי</title>
 <style>
+html{touch-action:manipulation}
+html.in-app,html.in-app body{-webkit-text-size-adjust:100%}
+
 :root{
   color-scheme: light;
   --surface-1:#fcfcfb; --plane:#f4f4f1; --plane-2:#eceae5;
