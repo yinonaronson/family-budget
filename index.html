@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl" data-theme="light">
 <head>
 <meta charset="utf-8">
+<script src="i18n/i18n.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>
 /* בתוך אפליקציית הטלפון זה מסך של אפליקציה ולא אתר: בלי הגדלה בהקשה כפולה
@@ -27,6 +28,8 @@ if(window.__FAMILY_POCKET_APP__||window.ReactNativeWebView){
 html{touch-action:manipulation}
 html.in-app,html.in-app body{-webkit-text-size-adjust:100%}
 
+:root{--start:right;}
+[dir=ltr]{--start:left;}
 :root{
   color-scheme: light;
   --surface-1:#fcfcfb; --plane:#f4f4f1; --plane-2:#eceae5;
@@ -285,7 +288,11 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
 .authlogo{width:52px;height:52px;border-radius:16px;background:var(--s1);color:#fff;
   display:grid;place-items:center;font-size:25px;margin:0 auto 14px}
 .authbox h1{font-size:22px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
-.authbox .f{text-align:right;margin-bottom:12px}
+.authbox .f{text-align:start;margin-bottom:12px}
+.langsw{display:inline-flex;gap:4px;padding:3px;border-radius:999px;background:var(--surface-2,rgba(0,0,0,.05));border:1px solid var(--border,rgba(0,0,0,.08))}
+.langsw button{border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:999px;color:var(--text-secondary);cursor:pointer}
+.langsw button[aria-pressed="true"]{background:var(--s1);color:#fff}
+.langsw.lang-top{display:flex;width:max-content;margin:0 auto 16px}
 .authalt{margin-top:18px;font-size:13.5px;color:var(--text-secondary);line-height:2}
 .authalt a{color:var(--s1);font-weight:600;text-decoration:none}
 .authalt a:hover{text-decoration:underline}
@@ -734,6 +741,7 @@ footer.note{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 16
     <div class="land-top-in">
       <div class="brand"><span class="logo">&#8362;</span><span>הכיס המשפחתי</span></div>
       <button class="btn ghost sm" id="landTheme" aria-label="מצב כהה או בהיר">◐</button>
+      <span id="landLang"></span>
       <button class="btn sm" id="landLogin">כניסה</button>
     </div>
   </header>
@@ -1875,6 +1883,7 @@ function drawAuth(){
 
   document.getElementById('authIn').innerHTML=`
     <div class="authbox">
+      ${langSwitcherHTML('lang-top')}
       <div class="authlogo">₪</div>
       <h1>הכיס המשפחתי</h1>
       <p class="sub" style="margin:0 0 18px">${authMode==='up'?'יצירת חשבון חדש':'כניסה לחשבון'}</p>
@@ -2036,7 +2045,7 @@ async function afterAuth(nameHint){
     if(!n)return;
     render();
     toast(`${n} הוצאות קבועות נטענו ל${monthLabel(thisMonth())} ✓`,
-      {label:'ביטול',fn:()=>undoAutoFixed(thisMonth())});
+      {label:'בטל',fn:()=>undoAutoFixed(thisMonth())});
   }).catch(()=>{});
   if(back){
     setSyncUI('busy');
@@ -2885,14 +2894,14 @@ function deleteDraft(){
       const backup=parts.map(t=>Object.assign({},t));
       backup.forEach(t=>removeRec('tx',t.id));
       save();closeSheet();render();
-      toast('הפיצול נמחק',{label:'ביטול',fn:()=>{
+      toast('הפיצול נמחק',{label:'בטל',fn:()=>{
         backup.forEach(t=>undoRemove('tx',t));render()}});
       return;
     }
   }
   const backup=Object.assign({},S.tx.find(t=>t.id===draft.id));
   removeRec('tx',draft.id);save();closeSheet();render();
-  toast('התנועה נמחקה',{label:'ביטול',fn:()=>{undoRemove('tx',backup);render()}});
+  toast('התנועה נמחקה',{label:'בטל',fn:()=>{undoRemove('tx',backup);render()}});
 }
 document.getElementById('fab').onclick=()=>openSheet();
 document.getElementById('sheetX').onclick=closeSheet;
@@ -3082,7 +3091,7 @@ function wireBudget(){
   document.querySelectorAll('.delCat').forEach(b=>b.onclick=()=>{
     const c=Object.assign({},catById(b.dataset.id));
     removeRec('categories',b.dataset.id);save();render();
-    toast(`"${c.name}" נמחקה`,{label:'ביטול',fn:()=>{undoRemove('categories',c);render()}});
+    toast(`"${c.name}" נמחקה`,{label:'בטל',fn:()=>{undoRemove('categories',c);render()}});
   });
   document.getElementById('addCat').onclick=()=>{
     const n=document.getElementById('newCat').value.trim();if(!n)return;
@@ -3105,7 +3114,7 @@ function wireBudget(){
   document.querySelectorAll('.delXfer').forEach(b=>b.onclick=()=>{
     const c=Object.assign({},S.transferCats.find(x=>x.id===b.dataset.id));
     removeRec('transferCats',b.dataset.id);save();render();
-    toast(`"${c.name}" נמחק`,{label:'ביטול',fn:()=>{undoRemove('transferCats',c);render()}});
+    toast(`"${c.name}" נמחק`,{label:'בטל',fn:()=>{undoRemove('transferCats',c);render()}});
   });
 }
 
@@ -3629,7 +3638,7 @@ function wireAssets(){
        מה שנמחק הוא ההחזקה, לא ההיסטוריה. */
     S.tx.forEach(t=>{if(t.assetId===a.id){t.assetId=null;touch(t)}});
     removeRec('assets',a.id);save();drawAssets();
-    toast(`"${a.name}" נמחק`,{label:'ביטול',fn:()=>{undoRemove('assets',a);drawAssets()}});
+    toast(`"${a.name}" נמחק`,{label:'בטל',fn:()=>{undoRemove('assets',a);drawAssets()}});
   });
 
   const kb=document.getElementById('astKind');
@@ -4852,13 +4861,16 @@ async function wireAdmin(){
 function viewSettings(){
   const me=SESSION&&SESSION.user;
   return `
+  <div class="card"><h2 data-noi18n>🌐 שפה · Language · اللغة</h2>
+    <p class="sub">השפה נשמרת במכשיר הזה. כל בן משפחה בוחר לעצמו.</p>
+    <div style="margin-top:10px">${langSwitcherHTML()}</div></div>
   ${installCard()}
 
   ${adminCard()}
 
   <div class="card">
     <h2>👤 החשבון שלי</h2>
-    <p class="sub" dir="ltr" style="text-align:right">${esc(me?me.email:'')}</p>
+    <p class="sub" dir="ltr" style="text-align:var(--start,right)">${esc(me?me.email:'')}</p>
     <div class="toolbar">
       <button class="btn ghost" id="signOutBtn">התנתקות</button>
       <button class="btn ghost" id="pwBtn">שינוי סיסמה</button>
@@ -5446,6 +5458,8 @@ function runKeypad(){
 }
 
 function wireLanding(){
+  const ll=document.getElementById('landLang');
+  if(ll&&!ll.childElementCount)ll.innerHTML=langSwitcherHTML();
   const box=document.getElementById('discBox');
   if(box&&!box.childElementCount)box.innerHTML=disclosureHtml();
 
