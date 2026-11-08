@@ -225,6 +225,8 @@ function Shell() {
           decelerationRate="normal"
           bounces
           textInteractionEnabled
+          setBuiltInZoomControls={false}
+          textZoom={100}
           applicationNameForUserAgent="FamilyPocketApp/1.0"
         />
       )}
